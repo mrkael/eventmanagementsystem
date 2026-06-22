@@ -1,0 +1,1 @@
+<x-layouts.admin title="Create Venue" heading="Create Venue" subheading="Add a location and capacity"><form method="POST" action="{{ route('admin.venues.store') }}" class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">@include('admin.event-setup.venues._form', ['button' => 'Create venue'])</form></x-layouts.admin>

@@ -1,0 +1,1 @@
+<x-layouts.admin title="Create Event Type" heading="Create Event Type" subheading="Add a workflow type"><form method="POST" action="{{ route('admin.event-types.store') }}" class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">@include('admin.event-setup.types._form', ['button' => 'Create type'])</form></x-layouts.admin>

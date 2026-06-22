@@ -1,0 +1,1 @@
+<x-layouts.admin title="Create Event Status" heading="Create Event Status" subheading="Add a lifecycle value"><form method="POST" action="{{ route('admin.event-statuses.store') }}" class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">@include('admin.event-setup.statuses._form', ['button' => 'Create status'])</form></x-layouts.admin>

@@ -1,0 +1,1 @@
+<x-layouts.admin title="Edit Event Status" heading="Edit Event Status" subheading="{{ $status->name }}"><form method="POST" action="{{ route('admin.event-statuses.update', $status) }}" class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">@method('PUT')@include('admin.event-setup.statuses._form', ['button' => 'Update status'])</form></x-layouts.admin>

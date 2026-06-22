@@ -1,0 +1,1 @@
+<x-layouts.admin title="Edit Event" heading="Edit Event" subheading="{{ $event->title }}"><form method="POST" action="{{ route('admin.events.update',$event) }}" enctype="multipart/form-data">@method('PUT')@include('admin.events._form', ['button' => 'Update event'])</form></x-layouts.admin>

@@ -1,0 +1,1 @@
+<x-layouts.admin title="Create Event Configuration" heading="Create Event Configuration" subheading="Define reusable defaults"><form method="POST" action="{{ route('admin.event-configurations.store') }}" class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">@include('admin.event-setup.configuration._form', ['button' => 'Create configuration'])</form></x-layouts.admin>

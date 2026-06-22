@@ -1,0 +1,1 @@
+<x-layouts.admin title="Edit Venue" heading="Edit Venue" subheading="{{ $venue->name }}"><form method="POST" action="{{ route('admin.venues.update', $venue) }}" class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">@method('PUT')@include('admin.event-setup.venues._form', ['button' => 'Update venue'])</form></x-layouts.admin>

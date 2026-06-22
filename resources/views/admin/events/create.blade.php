@@ -1,0 +1,1 @@
+<x-layouts.admin title="Create Event" heading="Create Event" subheading="Save as draft before submit or publish"><form method="POST" action="{{ route('admin.events.store') }}" enctype="multipart/form-data">@include('admin.events._form', ['button' => 'Save draft'])</form></x-layouts.admin>

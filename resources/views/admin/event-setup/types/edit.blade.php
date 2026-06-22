@@ -1,0 +1,1 @@
+<x-layouts.admin title="Edit Event Type" heading="Edit Event Type" subheading="{{ $type->name }}"><form method="POST" action="{{ route('admin.event-types.update', $type) }}" class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">@method('PUT')@include('admin.event-setup.types._form', ['button' => 'Update type'])</form></x-layouts.admin>
