@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'event_id', 'title', 'description', 'access_mode', 'is_enabled', 'requires_approval',
+    'event_id', 'created_by', 'updated_by', 'title', 'description', 'status', 'access_mode', 'is_enabled', 'requires_approval',
     'allow_waitlist', 'is_multi_step', 'opens_at', 'closes_at', 'settings',
 ])]
 class RegistrationForm extends Model
@@ -63,5 +63,15 @@ class RegistrationForm extends Model
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

@@ -4,12 +4,12 @@
 <body class="bg-slate-50 text-slate-950">
     <main class="mx-auto max-w-3xl px-4 py-8">
         <div class="mb-6">
-            <a href="{{ route('core.public.events.show', $event) }}" class="text-sm font-semibold text-emerald-700">Back to event</a>
+            <a href="{{ route('core.public.events.show', ['event' => $event->custom_url]) }}" class="text-sm font-semibold text-emerald-700">Back to event</a>
             <h1 class="mt-3 text-3xl font-bold">{{ $ticket->name }}</h1>
             <p class="mt-2 text-slate-600">{{ $event->title }} · {{ $event->starts_at->format('d M Y, H:i') }}</p>
         </div>
         @if($errors->any())<div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{{ $errors->first() }}</div>@endif
-        <form method="POST" action="{{ route('core.public.submit', [$event, $ticket]) }}" enctype="multipart/form-data" class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <form method="POST" action="{{ route('core.public.submit', ['event' => $event->custom_url, 'ticket' => $ticket]) }}" enctype="multipart/form-data" class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             @csrf
             <div class="grid gap-4 md:grid-cols-2">
                 <label class="block"><span class="text-sm font-medium">Full name</span><input name="full_name" value="{{ old('full_name') }}" required class="mt-1 w-full rounded-lg border-slate-300"></label>

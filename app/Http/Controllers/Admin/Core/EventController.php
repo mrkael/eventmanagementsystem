@@ -8,11 +8,10 @@ use App\Models\Event;
 use App\Models\EventCategory;
 use App\Models\EventStatus;
 use App\Models\EventType;
+use App\Models\OrganiserProfile;
 use App\Services\AuditLogger;
-use App\Services\Core\MicrositeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -20,32 +19,33 @@ class EventController extends Controller
     public function index(Request $request): View
     {
         $events = Event::query()
-            ->when($request->filled('search'), fn ($query) => $query->where('title', 'like', "%{$request->search}%")->orWhere('custom_url', 'like', "%{$request->search}%"))
-            ->orderByRaw('custom_url IS NULL')
+            ->with('organiserProfile')
+            ->withCount('tickets')
+            ->when($request->filled('search'), fn ($query) => $query->where('title', 'like', "%{$request->search}%"))
+            ->when($request->filled('organiser_profile_id'), fn ($query) => $query->where('organiser_profile_id', $request->organiser_profile_id))
+            ->when($request->filled('status'), fn ($query) => $query->where('status_key', $request->status))
             ->latest()
             ->paginate(12)
             ->withQueryString();
 
-        return view('admin.core.events.index', compact('events'));
+        return view('admin.core.events.index', [
+            'events' => $events,
+            'organiserProfiles' => OrganiserProfile::orderBy('name')->get(),
+            'statuses' => ['draft', 'submitted', 'published'],
+        ]);
     }
 
     public function create(): View
     {
         return view('admin.core.events.create', [
-            'organiserProfiles' => \App\Models\OrganiserProfile::where('is_active', true)->orderBy('name')->get(),
+            'organiserProfiles' => OrganiserProfile::where('status', 'active')->orderBy('name')->get(),
         ]);
     }
 
-    public function store(CoreEventRequest $request, MicrositeService $microsite, AuditLogger $auditLogger): RedirectResponse
+    public function store(CoreEventRequest $request, AuditLogger $auditLogger): RedirectResponse
     {
         $event = Event::create($this->payload($request));
-        $this->storeFiles($event, $request);
-        $microsite->save($event, ['sections' => $microsite->defaultSections($event)]);
-        $status = $event->status_key instanceof \BackedEnum ? $event->status_key->value : (string) $event->status_key;
-        if ($status === 'published') {
-            $microsite->publish($event);
-        }
-        $auditLogger->record('core.events.create', "Created event {$event->title}.", $event);
+        $auditLogger->record('events.create', "Created event {$event->title}.", $event);
 
         return redirect()->route('core.events.show', $event)->with('status', 'Event saved.');
     }
@@ -61,18 +61,14 @@ class EventController extends Controller
     {
         return view('admin.core.events.edit', [
             'event' => $event,
-            'organiserProfiles' => \App\Models\OrganiserProfile::where('is_active', true)->orderBy('name')->get(),
+            'organiserProfiles' => OrganiserProfile::where('status', 'active')->orderBy('name')->get(),
         ]);
     }
 
-    public function update(CoreEventRequest $request, Event $event, MicrositeService $microsite, AuditLogger $auditLogger): RedirectResponse
+    public function update(CoreEventRequest $request, Event $event, AuditLogger $auditLogger): RedirectResponse
     {
         $event->update($this->payload($request));
-        $this->storeFiles($event, $request);
-        if ($request->input('status_key') === 'published') {
-            $microsite->publish($event);
-        }
-        $auditLogger->record('core.events.update', "Updated event {$event->title}.", $event);
+        $auditLogger->record('events.update', "Updated event {$event->title}.", $event);
 
         return redirect()->route('core.events.show', $event)->with('status', 'Event updated.');
     }
@@ -90,45 +86,21 @@ class EventController extends Controller
             'event_type_id' => $type->id,
             'event_status_id' => $status->id,
             'title' => $request->title,
-            'slug' => $request->custom_url,
-            'custom_url' => $request->custom_url,
-            'summary' => $request->summary,
+            'slug' => $request->slug,
+            'custom_url' => $request->filled('custom_url') ? $request->custom_url : null,
+            'summary' => str($request->description ?? '')->limit(500, ''),
             'description' => $request->description,
             'starts_at' => $request->starts_at,
             'ends_at' => $request->ends_at,
             'location' => $request->location,
-            'capacity' => $request->capacity,
-            'payment_tax_percentage' => $request->input('payment_tax_percentage', 0),
-            'allow_promo_code' => $request->boolean('allow_promo_code'),
-            'allow_duplicate_email' => $request->boolean('allow_duplicate_email'),
-            'sender_name' => $request->sender_name,
-            'sender_email' => $request->sender_email,
+            'allow_duplicate_email' => $request->boolean('allow_duplicate_email_registration'),
             'status_key' => $request->status_key,
             'is_public' => $request->status_key === 'published',
             'is_registration_enabled' => true,
-            'brand_color' => $request->brand_color ?: '#047857',
             'registration_opens_at' => $request->registration_opens_at,
             'registration_closes_at' => $request->registration_closes_at,
+            'updated_by' => $request->user()->id,
+            ...($request->isMethod('post') ? ['created_by' => $request->user()->id] : []),
         ];
-    }
-
-    private function storeFiles(Event $event, CoreEventRequest $request): void
-    {
-        $updates = [];
-        if ($request->hasFile('logo')) {
-            if ($event->logo_path) {
-                Storage::disk('public')->delete($event->logo_path);
-            }
-            $updates['logo_path'] = $request->file('logo')->store('events/logos', 'public');
-        }
-        if ($request->hasFile('banner')) {
-            if ($event->banner_path) {
-                Storage::disk('public')->delete($event->banner_path);
-            }
-            $updates['banner_path'] = $request->file('banner')->store('events/banners', 'public');
-        }
-        if ($updates) {
-            $event->update($updates);
-        }
     }
 }

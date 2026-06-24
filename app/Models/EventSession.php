@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['event_id', 'venue_id', 'title', 'description', 'location', 'starts_at', 'ends_at', 'capacity', 'sort_order', 'status', 'one_time_check_in', 'checkout_enabled'])]
+#[Fillable(['event_id', 'event_agenda_id', 'venue_id', 'created_by', 'updated_by', 'title', 'description', 'session_type', 'location', 'venue_name', 'starts_at', 'ends_at', 'capacity', 'sort_order', 'status', 'one_time_check_in', 'checkout_enabled'])]
 class EventSession extends Model
 {
+    use SoftDeletes;
+
     protected function casts(): array
     {
         return [
@@ -26,6 +29,11 @@ class EventSession extends Model
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function agenda(): BelongsTo
+    {
+        return $this->belongsTo(EventAgenda::class, 'event_agenda_id');
     }
 
     public function venue(): BelongsTo

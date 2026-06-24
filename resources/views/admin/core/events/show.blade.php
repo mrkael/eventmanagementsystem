@@ -1,21 +1,42 @@
-<x-layouts.admin title="{{ $event->title }}" heading="{{ $event->title }}" subheading="Core event workspace">
-    <div class="grid gap-4 sm:grid-cols-3">
-        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"><p class="text-sm text-slate-500">Tickets</p><p class="mt-2 text-3xl font-bold">{{ $event->tickets_count }}</p></div>
-        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"><p class="text-sm text-slate-500">Registrations</p><p class="mt-2 text-3xl font-bold">{{ $event->core_registrations_count }}</p></div>
-        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"><p class="text-sm text-slate-500">Sessions</p><p class="mt-2 text-3xl font-bold">{{ $event->sessions_count }}</p></div>
+<x-layouts.admin title="{{ $event->title }}" heading="{{ $event->title }}" eyebrow="Event Details">
+    <x-ui.page-header
+        eyebrow="Event Details"
+        title="{{ $event->title }}"
+        description="Open Settings to configure the event, or Tickets to create and manage ticket types for this event."
+    >
+        <x-slot:actions>
+            <a href="{{ route('core.events.index') }}" class="ds-button-secondary">Back to Events</a>
+            <a href="{{ route('core.events.edit', $event) }}" class="ds-button-primary">Open Settings</a>
+        </x-slot:actions>
+    </x-ui.page-header>
+
+    @include('admin.core.events._tabs', ['event' => $event, 'active' => 'settings'])
+
+    @php($eventStatus = $event->status_key instanceof \BackedEnum ? $event->status_key->value : $event->status_key)
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <x-ui.card>
+            <p class="text-sm font-bold text-slate-500">Organiser Profile</p>
+            <p class="mt-3 text-xl font-semibold text-slate-950">{{ $event->organiserProfile?->name ?? 'Not assigned' }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ $event->organiserProfile?->email }}</p>
+        </x-ui.card>
+        <x-ui.card>
+            <p class="text-sm font-bold text-slate-500">Event URL</p>
+            <p class="mt-3 break-all font-mono text-sm text-slate-950">{{ $event->custom_url ? url('/e/'.$event->custom_url) : url('/e/your-event-url') }}</p>
+        </x-ui.card>
+        <x-ui.card>
+            <p class="text-sm font-bold text-slate-500">Tickets</p>
+            <p class="mt-3 text-3xl font-semibold text-slate-950">{{ number_format($event->tickets_count) }}</p>
+        </x-ui.card>
     </div>
-    <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" href="{{ route('core.events.edit', $event) }}">Event setup</a>
-        <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" href="{{ route('core.events.microsite.edit', $event) }}">Microsite CMS</a>
-        <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" href="{{ route('core.events.forms.index', $event) }}">Registration forms</a>
-        <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" href="{{ route('core.events.tickets.index', $event) }}">Tickets & promos</a>
-        <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" href="{{ route('core.events.sessions.index', $event) }}">Sessions & check-in</a>
-        <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" href="{{ route('core.attendees.index', ['event_id' => $event->id]) }}">Attendees</a>
-        <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" href="{{ route('core.events.reports.index', $event) }}">Event report</a>
-        @if($event->custom_url)
-            <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold shadow-sm" target="_blank" href="{{ route('core.public.events.show', $event) }}">Public microsite</a>
-        @else
-            <a class="rounded-lg border border-slate-200 bg-white p-4 font-semibold text-slate-500 shadow-sm" href="{{ route('core.events.edit', $event) }}">Set public URL</a>
-        @endif
-    </div>
+
+    <x-ui.card class="mt-6">
+        <dl class="grid gap-5 md:grid-cols-2">
+            <div><dt class="ds-label">Event Date</dt><dd class="mt-2 text-slate-700">{{ $event->starts_at?->format('d M Y, H:i') }} - {{ $event->ends_at?->format('d M Y, H:i') }}</dd></div>
+            <div><dt class="ds-label">Status</dt><dd class="mt-2 text-slate-700">{{ ucfirst($eventStatus) }}</dd></div>
+            <div><dt class="ds-label">Location</dt><dd class="mt-2 text-slate-700">{{ $event->location ?: '-' }}</dd></div>
+            <div><dt class="ds-label">Multiple Email Registration</dt><dd class="mt-2 text-slate-700">{{ $event->allow_duplicate_email ? 'Allowed' : 'Not allowed' }}</dd></div>
+            <div class="md:col-span-2"><dt class="ds-label">Description</dt><dd class="mt-2 whitespace-pre-line text-slate-700">{{ $event->description ?: '-' }}</dd></div>
+        </dl>
+    </x-ui.card>
 </x-layouts.admin>

@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -44,16 +43,6 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
-    }
-
-    public function organiserProfiles(): BelongsToMany
-    {
-        return $this->belongsToMany(OrganiserProfile::class)->withTimestamps();
-    }
-
-    public function createdOrganiserProfiles(): HasMany
-    {
-        return $this->hasMany(OrganiserProfile::class, 'created_by');
     }
 
     public function hasRole(string $roleKey): bool

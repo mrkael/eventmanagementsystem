@@ -1,3 +1,4 @@
+@import 'tom-select/dist/css/tom-select.css';
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -7,11 +8,264 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-brand-50: #eef6ff;
+    --color-brand-100: #d9ebff;
+    --color-brand-500: #2563eb;
+    --color-brand-600: #1d4ed8;
+    --color-brand-950: #172554;
+    --color-ink-950: #09090b;
+    --color-ink-700: #3f3f46;
+    --color-ink-500: #71717a;
+    --color-surface: #ffffff;
+    --color-surface-muted: #f7f8fb;
+    --shadow-soft: 0 18px 60px rgb(15 23 42 / 0.08);
+    --shadow-lift: 0 24px 80px rgb(15 23 42 / 0.12);
+    --radius-shell: 28px;
+    --radius-card: 22px;
 }
 
 @layer components {
+    .ds-shell-bg {
+        background:
+            radial-gradient(circle at 12% 8%, rgb(37 99 235 / 0.12), transparent 28rem),
+            radial-gradient(circle at 90% 0%, rgb(14 165 233 / 0.10), transparent 30rem),
+            linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    }
+
+    .ds-glass {
+        border: 1px solid rgb(255 255 255 / 0.62);
+        background: rgb(255 255 255 / 0.76);
+        box-shadow: var(--shadow-soft);
+        backdrop-filter: blur(24px);
+    }
+
+    .ds-card {
+        border: 1px solid rgb(226 232 240 / 0.86);
+        border-radius: var(--radius-card);
+        background: rgb(255 255 255 / 0.9);
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    }
+
+    .ds-card-hover {
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .ds-card-hover:hover {
+        transform: translateY(-2px);
+        border-color: rgb(147 197 253 / 0.7);
+        box-shadow: var(--shadow-soft);
+    }
+
+    .ds-button-primary {
+        display: inline-flex;
+        min-height: 2.75rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-radius: 999px;
+        background: #0f172a;
+        padding-inline: 1rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: white;
+        transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+        box-shadow: 0 10px 30px rgb(15 23 42 / 0.18);
+    }
+
+    .ds-button-primary:hover {
+        transform: translateY(-1px);
+        background: #020617;
+    }
+
+    .ds-button-secondary {
+        display: inline-flex;
+        min-height: 2.75rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 1px solid rgb(226 232 240);
+        border-radius: 999px;
+        background: rgb(255 255 255 / 0.86);
+        padding-inline: 1rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #0f172a;
+        transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+    }
+
+    .ds-button-secondary:hover {
+        transform: translateY(-1px);
+        border-color: rgb(148 163 184);
+        background: white;
+    }
+
+    .ds-input {
+        min-height: 2.875rem;
+        width: 100%;
+        border-radius: 1rem;
+        border: 1px solid rgb(226 232 240);
+        background: rgb(255 255 255 / 0.9);
+        padding-inline: 0.875rem;
+        font-size: 0.875rem;
+        color: #0f172a;
+        outline: none;
+        transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    .ds-input:focus {
+        border-color: rgb(37 99 235 / 0.55);
+        box-shadow: 0 0 0 4px rgb(37 99 235 / 0.12);
+        background: white;
+    }
+
+    .ds-label {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: #334155;
+    }
+
+    .ts-wrapper {
+        width: 100%;
+        font-size: 0.875rem;
+    }
+
+    .form-ticket-select .ts-wrapper {
+        margin-top: 0.5rem;
+    }
+
+    .ts-wrapper.multi .ts-control,
+    .ts-wrapper.single .ts-control {
+        min-height: 2.875rem;
+        border: 1px solid rgb(226 232 240);
+        border-radius: 1rem;
+        background: rgb(255 255 255 / 0.9);
+        padding: 0.35rem 0.5rem;
+        color: #0f172a;
+        box-shadow: none;
+        transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    .ts-control {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .ts-control > input {
+        min-width: 9rem;
+        font-size: 0.875rem;
+        color: #0f172a;
+    }
+
+    .ts-control > input::placeholder {
+        color: #94a3b8;
+    }
+
+    .ts-wrapper.focus .ts-control {
+        border-color: rgb(37 99 235 / 0.55);
+        background: white;
+        box-shadow: 0 0 0 4px rgb(37 99 235 / 0.12);
+    }
+
+    .ts-wrapper.multi .ts-control > div {
+        margin: 0.15rem;
+        border-radius: 999px;
+        background: #0f172a;
+        padding: 0.28rem 0.65rem;
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: white;
+    }
+
+    .ts-wrapper.plugin-remove_button .item .remove {
+        margin-left: 0.45rem;
+        border-left: 1px solid rgb(255 255 255 / 0.24);
+        color: rgb(255 255 255 / 0.86);
+    }
+
+    .ts-dropdown {
+        margin-top: 0.5rem;
+        overflow: hidden;
+        border: 1px solid rgb(226 232 240);
+        border-radius: 1rem;
+        background: white;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .ts-dropdown .dropdown-input {
+        margin: 0.55rem;
+        width: calc(100% - 1.1rem);
+        border: 1px solid rgb(226 232 240);
+        border-radius: 0.75rem;
+        padding: 0.55rem 0.7rem;
+        font-size: 0.875rem;
+        outline: none;
+    }
+
+    .ts-dropdown .dropdown-input:focus {
+        border-color: rgb(37 99 235 / 0.55);
+        box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+    }
+
+    .ts-dropdown .option {
+        padding: 0.75rem 0.9rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #334155;
+    }
+
+    .ts-dropdown .active {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .ds-page-enter {
+        animation: ds-page-enter 280ms ease both;
+    }
+
+    .ds-skeleton {
+        position: relative;
+        overflow: hidden;
+        background: #e5e7eb;
+    }
+
+    .ds-skeleton::after {
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
+        animation: ds-shimmer 1.5s infinite;
+        content: '';
+    }
+
+    .codex-editor {
+        font-family: inherit;
+    }
+
+    .ce-block__content,
+    .ce-toolbar__content {
+        max-width: 100%;
+    }
+
     .sidebar-collapsed .sidebar-label {
         display: none;
+    }
+
+    @keyframes ds-page-enter {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes ds-shimmer {
+        100% {
+            transform: translateX(100%);
+        }
     }
 
     @media (prefers-reduced-motion: reduce) {

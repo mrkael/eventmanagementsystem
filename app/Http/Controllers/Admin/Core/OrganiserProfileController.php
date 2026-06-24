@@ -3,73 +3,77 @@
 namespace App\Http\Controllers\Admin\Core;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Core\OrganiserProfileRequest;
 use App\Models\OrganiserProfile;
-use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Core\OrganiserProfileService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class OrganiserProfileController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('admin.core.organisers.index', [
-            'profiles' => OrganiserProfile::withCount('events', 'users')->latest()->paginate(12),
-            'users' => User::orderBy('name')->get(),
+        $sort = $request->input('sort') === 'name' ? 'name' : 'created_at';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        $profiles = OrganiserProfile::query()
+            ->with('creator')
+            ->withCount('events')
+            ->when($request->filled('search'), fn ($query) => $query->where(function ($query) use ($request) {
+                $query->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('email', 'like', "%{$request->search}%");
+            }))
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
+            ->orderBy($sort, $direction)
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('admin.core.organisers.index', compact('profiles', 'sort', 'direction'));
+    }
+
+    public function create(): View
+    {
+        return view('admin.core.organisers.create');
+    }
+
+    public function store(OrganiserProfileRequest $request, OrganiserProfileService $service, AuditLogger $auditLogger): RedirectResponse
+    {
+        $profile = $service->create($request->validated(), $request->user()->id);
+        $auditLogger->record('organisers.create', "Created organiser profile {$profile->name}.", $profile);
+
+        return redirect()->route('core.organisers.show', $profile)->with('status', 'Organiser profile created.');
+    }
+
+    public function show(OrganiserProfile $organiser): View
+    {
+        return view('admin.core.organisers.show', [
+            'profile' => $organiser->load('creator', 'updater')->loadCount('events'),
         ]);
     }
 
-    public function store(Request $request, AuditLogger $auditLogger): RedirectResponse
+    public function edit(OrganiserProfile $organiser): View
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email:rfc', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:80'],
-            'website' => ['nullable', 'url', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
-            'logo' => ['nullable', 'image', 'max:2048'],
-            'user_ids' => ['nullable', 'array'],
-            'user_ids.*' => ['integer', 'exists:users,id'],
+        return view('admin.core.organisers.edit', [
+            'profile' => $organiser,
         ]);
-
-        if ($request->hasFile('logo')) {
-            $data['logo_path'] = $request->file('logo')->store('organisers', 'public');
-        }
-
-        $profile = OrganiserProfile::create($data + ['created_by' => $request->user()->id, 'is_active' => true]);
-        $profile->users()->sync($request->input('user_ids', []));
-        $auditLogger->record('eevee.organisers.create', "Created organiser profile {$profile->name}.", $profile);
-
-        return back()->with('status', 'Organiser profile saved.');
     }
 
-    public function update(Request $request, OrganiserProfile $organiser, AuditLogger $auditLogger): RedirectResponse
+    public function update(OrganiserProfileRequest $request, OrganiserProfile $organiser, OrganiserProfileService $service, AuditLogger $auditLogger): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email:rfc', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:80'],
-            'website' => ['nullable', 'url', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
-            'is_active' => ['nullable', 'boolean'],
-            'logo' => ['nullable', 'image', 'max:2048'],
-            'user_ids' => ['nullable', 'array'],
-            'user_ids.*' => ['integer', 'exists:users,id'],
-        ]);
+        $oldValues = $organiser->only(['name', 'email', 'phone', 'website', 'address', 'description', 'logo_path', 'status']);
+        $profile = $service->update($organiser, $request->validated(), $request->user()->id);
+        $auditLogger->record('organisers.update', "Updated organiser profile {$profile->name}.", $profile, $oldValues, $profile->only(array_keys($oldValues)));
 
-        if ($request->hasFile('logo')) {
-            if ($organiser->logo_path) {
-                Storage::disk('public')->delete($organiser->logo_path);
-            }
-            $data['logo_path'] = $request->file('logo')->store('organisers', 'public');
-        }
+        return redirect()->route('core.organisers.show', $profile)->with('status', 'Organiser profile updated.');
+    }
 
-        $organiser->update($data + ['is_active' => $request->boolean('is_active')]);
-        $organiser->users()->sync($request->input('user_ids', []));
-        $auditLogger->record('eevee.organisers.update', "Updated organiser profile {$organiser->name}.", $organiser);
+    public function destroy(OrganiserProfile $organiser, OrganiserProfileService $service, AuditLogger $auditLogger): RedirectResponse
+    {
+        $auditLogger->record('organisers.delete', "Deleted organiser profile {$organiser->name}.", $organiser);
+        $service->delete($organiser);
 
-        return back()->with('status', 'Organiser profile updated.');
+        return redirect()->route('core.organisers.index')->with('status', 'Organiser profile deleted.');
     }
 }

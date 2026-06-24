@@ -2,39 +2,45 @@
 
 namespace App\Services\Core;
 
-use App\Mail\CoreRegistrationConfirmationMail;
-use App\Models\EmailTemplate;
 use App\Models\Event;
 use App\Models\PromoCode;
 use App\Models\Registration;
 use App\Models\RegistrationForm;
 use App\Models\RegistrationFormField;
 use App\Models\Ticket;
-use App\Services\Attendance\QrCodeImageService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CoreRegistrationService
 {
-    public function __construct(private QrCodeImageService $qrCodeImageService) {}
+    public function __construct(private EventConfirmationEmailService $confirmationEmailService) {}
 
     public function register(Event $event, Ticket $ticket, array $data): Registration
+    {
+        return $this->registerInternal($event, $ticket, $data, true);
+    }
+
+    public function registerManually(Event $event, Ticket $ticket, array $data, int $userId): Registration
+    {
+        return $this->registerInternal($event, $ticket, [...$data, 'registered_by' => $userId], false);
+    }
+
+    private function registerInternal(Event $event, Ticket $ticket, array $data, bool $requirePublishedEvent): Registration
     {
         $form = $ticket->form()->with('fields')->first();
         if (! $form) {
             throw ValidationException::withMessages(['ticket' => 'This ticket does not have a registration form.']);
         }
 
-        $this->validateAvailability($event, $ticket, $data['email'] ?? null);
+        $this->validateAvailability($event, $ticket, $data['email'] ?? null, $requirePublishedEvent);
         $this->validateDynamicFields($form, $data['answers'] ?? [], $data['answer_files'] ?? []);
 
-        return DB::transaction(function () use ($event, $ticket, $form, $data) {
+        return DB::transaction(function () use ($data, $event, $form, $requirePublishedEvent, $ticket) {
             $ticket = Ticket::whereKey($ticket->id)->lockForUpdate()->firstOrFail();
-            $this->validateAvailability($event, $ticket, $data['email'] ?? null);
+            $this->validateAvailability($event, $ticket, $data['email'] ?? null, $requirePublishedEvent);
 
             $pricing = $this->pricing($event, $ticket, $data['promo_code'] ?? null);
             $rawToken = 'CORE-'.$event->id.'-'.Str::upper(Str::random(36));
@@ -56,6 +62,7 @@ class CoreRegistrationService
                 'final_amount' => $pricing['final'],
                 'promo_code' => $pricing['promo']?->code,
                 'qr_token_hash' => hash('sha256', $rawToken),
+                'registered_by' => $data['registered_by'] ?? null,
             ]);
 
             $ticket->decrement('available_quantity');
@@ -64,7 +71,38 @@ class CoreRegistrationService
             }
 
             $this->storeAnswers($registration, $form, $data['answers'] ?? [], $data['answer_files'] ?? []);
-            $this->sendConfirmation($registration->fresh(['event', 'ticket']), $rawToken);
+            $this->confirmationEmailService->sendRegistrationConfirmation($registration->fresh(['event.organiserProfile', 'ticket.form.fields', 'answers']), $rawToken);
+
+            return $registration->fresh(['event', 'ticket', 'answers']);
+        });
+    }
+
+    public function updateManual(Registration $registration, array $data): Registration
+    {
+        $registration->loadMissing('event', 'ticket.form.fields');
+        $form = $registration->ticket?->form;
+        if (! $form) {
+            throw ValidationException::withMessages(['ticket' => 'This ticket does not have a registration form.']);
+        }
+
+        $this->validateDynamicFields($form, $data['answers'] ?? [], $data['answer_files'] ?? []);
+
+        return DB::transaction(function () use ($data, $form, $registration) {
+            $existingFiles = $registration->answers()
+                ->whereNotNull('file_path')
+                ->pluck('file_path', 'field_key')
+                ->all();
+
+            $registration->update([
+                'full_name' => $data['full_name'],
+                'email' => Str::lower($data['email']),
+                'phone' => $data['phone'] ?? null,
+                'organization' => $data['organization'] ?? null,
+                'designation' => $data['designation'] ?? null,
+            ]);
+
+            $registration->answers()->delete();
+            $this->storeAnswers($registration, $form, $data['answers'] ?? [], $data['answer_files'] ?? [], $existingFiles);
 
             return $registration->fresh(['event', 'ticket', 'answers']);
         });
@@ -74,22 +112,22 @@ class CoreRegistrationService
     {
         $rawToken = 'CORE-'.$registration->event_id.'-'.Str::upper(Str::random(36));
         $registration->update(['qr_token_hash' => hash('sha256', $rawToken)]);
-        $this->sendConfirmation($registration->fresh(['event', 'ticket']), $rawToken);
+        $this->confirmationEmailService->sendRegistrationConfirmation($registration->fresh(['event.organiserProfile', 'ticket.form.fields', 'answers']), $rawToken);
     }
 
-    private function validateAvailability(Event $event, Ticket $ticket, ?string $email = null): void
+    private function validateAvailability(Event $event, Ticket $ticket, ?string $email = null, bool $requirePublishedEvent = true): void
     {
         $eventStatus = $event->status_key instanceof \BackedEnum ? $event->status_key->value : (string) $event->status_key;
 
-        if ($eventStatus !== 'published') {
+        if ($requirePublishedEvent && $eventStatus !== 'published') {
             throw ValidationException::withMessages(['event' => 'This event is not open for registration.']);
         }
 
-        if ($event->registration_opens_at && now()->lt($event->registration_opens_at)) {
+        if ($requirePublishedEvent && $event->registration_opens_at && now()->lt($event->registration_opens_at)) {
             throw ValidationException::withMessages(['event' => 'Registration has not opened yet.']);
         }
 
-        if ($event->registration_closes_at && now()->gt($event->registration_closes_at)) {
+        if ($requirePublishedEvent && $event->registration_closes_at && now()->gt($event->registration_closes_at)) {
             throw ValidationException::withMessages(['event' => 'Registration has closed.']);
         }
 
@@ -157,10 +195,10 @@ class CoreRegistrationService
 
         if ($promoCode) {
             $promo = PromoCode::where('event_id', $event->id)->where('code', Str::upper($promoCode))->where('is_active', true)->first();
-            if ($promo && (!$promo->ticket_id || $promo->ticket_id === $ticket->id)
-                && (!$promo->valid_from || now()->gte($promo->valid_from))
-                && (!$promo->valid_until || now()->lte($promo->valid_until))
-                && (!$promo->usage_limit || $promo->used_count < $promo->usage_limit)) {
+            if ($promo && (! $promo->ticket_id || $promo->ticket_id === $ticket->id)
+                && (! $promo->valid_from || now()->gte($promo->valid_from))
+                && (! $promo->valid_until || now()->lte($promo->valid_until))
+                && (! $promo->usage_limit || $promo->used_count < $promo->usage_limit)) {
                 $discount = $promo->discount_type === 'percentage' ? ($price * ((float) $promo->discount_value / 100)) : (float) $promo->discount_value;
             } else {
                 $promo = null;
@@ -174,10 +212,10 @@ class CoreRegistrationService
         return compact('price', 'discount', 'final', 'promo');
     }
 
-    private function storeAnswers(Registration $registration, RegistrationForm $form, array $answers, array $files): void
+    private function storeAnswers(Registration $registration, RegistrationForm $form, array $answers, array $files, array $existingFiles = []): void
     {
         foreach ($form->fields as $field) {
-            $filePath = null;
+            $filePath = $existingFiles[$field->key] ?? null;
             if ($field->type === 'file' && ($files[$field->key] ?? null) instanceof UploadedFile) {
                 $filePath = $files[$field->key]->store("core-registrations/{$registration->id}", 'public');
             }
@@ -191,31 +229,5 @@ class CoreRegistrationService
                 'file_path' => $filePath,
             ]);
         }
-    }
-
-    private function sendConfirmation(Registration $registration, string $rawToken): void
-    {
-        $template = EmailTemplate::where('event_id', $registration->event_id)->where('type', 'confirmation')->where('is_active', true)->first()
-            ?? EmailTemplate::whereNull('event_id')->where('type', 'confirmation')->where('is_active', true)->first();
-
-        $subject = $template?->subject ?? 'Registration confirmed: {{ event_name }}';
-        $body = $template?->body ?? "Hello {{ participant_name }},\n\nYour registration for {{ event_name }} is confirmed.\nTicket: {{ ticket_name }}\nReference: {{ registration_reference }}\n\n{{ qr_code }}";
-        $values = [
-            '{{ participant_name }}' => $registration->full_name,
-            '{{ event_name }}' => $registration->event->title,
-            '{{ event_date }}' => $registration->event->starts_at->format('d M Y, H:i'),
-            '{{ event_location }}' => $registration->event->location ?? '',
-            '{{ ticket_name }}' => $registration->ticket->name,
-            '{{ registration_reference }}' => $registration->reference_number,
-            '{{ qr_code }}' => '',
-        ];
-
-        Mail::to($registration->email)->send(new CoreRegistrationConfirmationMail(
-            registration: $registration,
-            ticketToken: $rawToken,
-            ticketQr: $this->qrCodeImageService->dataUri($rawToken),
-            renderedBody: nl2br(e(strtr($body, $values))),
-            renderedSubject: strtr($subject, $values),
-        ));
     }
 }

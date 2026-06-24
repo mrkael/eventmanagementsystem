@@ -14,8 +14,10 @@ class PublicRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'full_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email:rfc', 'max:255'],
+            'participants' => ['nullable', 'array'],
+            'participants.*' => ['array'],
+            'full_name' => ['required_without:participants', 'string', 'max:255'],
+            'email' => ['required_without:participants', 'email:rfc', 'max:255'],
             'phone' => ['nullable', 'string', 'max:60'],
             'organization' => ['nullable', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],

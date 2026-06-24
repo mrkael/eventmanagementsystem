@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'organizer_id', 'organiser_profile_id', 'event_category_id', 'event_type_id', 'venue_id', 'event_status_id',
+    'organizer_id', 'created_by', 'updated_by', 'organiser_profile_id', 'event_category_id', 'event_type_id', 'venue_id', 'event_status_id',
     'event_configuration_id', 'title', 'slug', 'summary', 'description', 'starts_at',
     'ends_at', 'capacity', 'is_registration_enabled', 'is_public', 'status_key',
     'banner_path', 'submitted_at', 'published_at', 'published_page_version_id',
@@ -45,6 +45,16 @@ class Event extends Model
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'organizer_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     public function organiserProfile(): BelongsTo
@@ -82,6 +92,11 @@ class Event extends Model
         return $this->hasMany(EventSession::class)->orderBy('sort_order')->orderBy('starts_at');
     }
 
+    public function agendas(): HasMany
+    {
+        return $this->hasMany(EventAgenda::class)->latest();
+    }
+
     public function documents(): HasMany
     {
         return $this->hasMany(EventDocument::class);
@@ -105,6 +120,11 @@ class Event extends Model
     public function registrationForms(): HasMany
     {
         return $this->hasMany(RegistrationForm::class);
+    }
+
+    public function customQuestions(): HasMany
+    {
+        return $this->hasMany(CustomQuestion::class);
     }
 
     public function participantRegistrations(): HasMany
@@ -155,6 +175,21 @@ class Event extends Model
     public function emailTemplates(): HasMany
     {
         return $this->hasMany(EmailTemplate::class);
+    }
+
+    public function eventEmailTemplates(): HasMany
+    {
+        return $this->hasMany(EventEmailTemplate::class);
+    }
+
+    public function confirmationEmailTemplate(): HasOne
+    {
+        return $this->hasOne(EventEmailTemplate::class)->where('type', 'confirmation');
+    }
+
+    public function emailLogs(): HasMany
+    {
+        return $this->hasMany(EmailLog::class);
     }
 
     public function reports(): HasMany

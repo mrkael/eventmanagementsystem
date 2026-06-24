@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'event_id', 'registration_form_id', 'name', 'description', 'currency', 'min_quantity', 'max_quantity', 'is_hidden', 'price', 'early_bird_price',
+    'event_id', 'created_by', 'updated_by', 'registration_form_id', 'name', 'description', 'currency', 'min_quantity', 'max_quantity', 'is_hidden', 'price', 'early_bird_price',
     'group_min_quantity', 'group_price', 'quantity', 'available_quantity',
     'sales_start_at', 'sales_end_at', 'status',
 ])]
@@ -41,6 +41,16 @@ class Ticket extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function form(): BelongsTo
     {
         return $this->belongsTo(RegistrationForm::class, 'registration_form_id');
@@ -54,6 +64,11 @@ class Ticket extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(Registration::class);
+    }
+
+    public function attendanceRecords(): HasMany
+    {
+        return $this->hasMany(AttendanceRecord::class);
     }
 
     public function sessions(): BelongsToMany

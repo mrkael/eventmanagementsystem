@@ -14,7 +14,9 @@ class CheckInRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'token' => ['required', 'string', 'max:160'],
+            'session_id' => ['required_without:token', 'integer', 'exists:event_sessions,id'],
+            'qr_token' => ['required_without:token', 'string', 'max:255'],
+            'token' => ['required_without:qr_token', 'string', 'max:255'],
             'action' => ['nullable', 'in:check_in,check_out'],
             'device_name' => ['nullable', 'string', 'max:160'],
         ];

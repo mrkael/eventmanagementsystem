@@ -12,4 +12,7 @@ return [
     |
     */
     'self_registration_enabled' => env('EMS_SELF_REGISTRATION_ENABLED', false),
+
+    'confirmation_email_test_mode' => env('EMS_CONFIRMATION_EMAIL_TEST_MODE', true),
+    'confirmation_email_test_recipient' => env('EMS_CONFIRMATION_EMAIL_TEST_RECIPIENT', 'ntwtestai@yopmail.com'),
 ];

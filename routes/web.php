@@ -1,20 +1,21 @@
 <?php
 
+use App\Http\Controllers\Admin\Attendance\AttendanceController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\Core\AttendeeController as CoreAttendeeController;
 use App\Http\Controllers\Admin\Core\CheckInController as CoreCheckInController;
 use App\Http\Controllers\Admin\Core\ContactController as CoreContactController;
-use App\Http\Controllers\Admin\Core\DashboardController as CoreDashboardController;
 use App\Http\Controllers\Admin\Core\EmailController as CoreEmailController;
+use App\Http\Controllers\Admin\Core\EventAgendaController as CoreEventAgendaController;
 use App\Http\Controllers\Admin\Core\EventController as CoreEventController;
+use App\Http\Controllers\Admin\Core\EventEmailController as CoreEventEmailController;
+use App\Http\Controllers\Admin\Core\FoundationController;
 use App\Http\Controllers\Admin\Core\MicrositeController as CoreMicrositeController;
 use App\Http\Controllers\Admin\Core\OrganiserProfileController as CoreOrganiserProfileController;
 use App\Http\Controllers\Admin\Core\RegistrationFormController as CoreRegistrationFormController;
 use App\Http\Controllers\Admin\Core\ReportController as CoreReportController;
 use App\Http\Controllers\Admin\Core\SessionController as CoreSessionController;
 use App\Http\Controllers\Admin\Core\TicketController as CoreTicketController;
-use App\Http\Controllers\Admin\Attendance\AttendanceController;
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\Events\EventController;
 use App\Http\Controllers\Admin\Events\EventPageBuilderController;
@@ -23,9 +24,9 @@ use App\Http\Controllers\Admin\EventSetup\EventConfigurationController;
 use App\Http\Controllers\Admin\EventSetup\EventStatusController;
 use App\Http\Controllers\Admin\EventSetup\EventTypeController;
 use App\Http\Controllers\Admin\EventSetup\VenueController;
+use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\Registrations\ParticipantRegistrationController;
 use App\Http\Controllers\Admin\Registrations\RegistrationFormBuilderController;
-use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -35,6 +36,15 @@ use App\Http\Controllers\Public\CoreEventController as PublicCoreEventController
 use App\Http\Controllers\Public\EventPageController;
 use App\Http\Controllers\Public\RegistrationController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/pagebuilder-assets/pagebuilder/{file}', function (string $file) {
+    $base = realpath(base_path('vendor/hansschouten/phpagebuilder/dist/pagebuilder'));
+    $path = realpath($base.DIRECTORY_SEPARATOR.$file);
+
+    abort_unless($base && $path && str_starts_with($path, $base), 404);
+
+    return response()->file($path);
+})->where('file', '.*')->name('pagebuilder.assets');
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -53,7 +63,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/dashboard', CoreDashboardController::class)
+    Route::get('/dashboard', [FoundationController::class, 'dashboard'])
         ->middleware('permission:dashboard.view')
         ->name('dashboard');
 
@@ -173,8 +183,12 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('admin/core')->name('core.')->group(function () {
         Route::get('organisers', [CoreOrganiserProfileController::class, 'index'])->middleware('permission:organisers.view')->name('organisers.index');
+        Route::get('organisers/create', [CoreOrganiserProfileController::class, 'create'])->middleware('permission:organisers.create')->name('organisers.create');
         Route::post('organisers', [CoreOrganiserProfileController::class, 'store'])->middleware('permission:organisers.create')->name('organisers.store');
+        Route::get('organisers/{organiser}', [CoreOrganiserProfileController::class, 'show'])->middleware('permission:organisers.view')->name('organisers.show');
+        Route::get('organisers/{organiser}/edit', [CoreOrganiserProfileController::class, 'edit'])->middleware('permission:organisers.update')->name('organisers.edit');
         Route::put('organisers/{organiser}', [CoreOrganiserProfileController::class, 'update'])->middleware('permission:organisers.update')->name('organisers.update');
+        Route::delete('organisers/{organiser}', [CoreOrganiserProfileController::class, 'destroy'])->middleware('permission:organisers.delete')->name('organisers.destroy');
 
         Route::get('contacts', [CoreContactController::class, 'index'])->middleware('permission:contacts.view')->name('contacts.index');
         Route::post('contacts', [CoreContactController::class, 'store'])->middleware('permission:contacts.create')->name('contacts.store');
@@ -184,22 +198,64 @@ Route::middleware('auth')->group(function () {
 
         Route::get('events', [CoreEventController::class, 'index'])->middleware('permission:events.view')->name('events.index');
         Route::get('events/create', [CoreEventController::class, 'create'])->middleware('permission:events.create')->name('events.create');
+        Route::get('events/foundation/detail', [FoundationController::class, 'eventShow'])->middleware('permission:events.view')->name('events.foundation.show');
+        Route::get('events/foundation/edit', [FoundationController::class, 'eventEdit'])->middleware('permission:events.update')->name('events.foundation.edit');
+        Route::get('events/foundation/microsite', [FoundationController::class, 'microsite'])->middleware('permission:events.update')->name('events.foundation.microsite');
         Route::post('events', [CoreEventController::class, 'store'])->middleware('permission:events.create')->name('events.store');
         Route::get('events/{event}', [CoreEventController::class, 'show'])->middleware('permission:events.view')->name('events.show');
         Route::get('events/{event}/edit', [CoreEventController::class, 'edit'])->middleware('permission:events.update')->name('events.edit');
         Route::put('events/{event}', [CoreEventController::class, 'update'])->middleware('permission:events.update')->name('events.update');
 
         Route::get('events/{event}/microsite', [CoreMicrositeController::class, 'edit'])->middleware('permission:events.update')->name('events.microsite.edit');
+        Route::get('events/{event}/microsite/preview', [CoreMicrositeController::class, 'preview'])->middleware('permission:events.update')->name('events.microsite.preview');
         Route::put('events/{event}/microsite', [CoreMicrositeController::class, 'update'])->middleware('permission:events.update')->name('events.microsite.update');
+        Route::post('events/{event}/microsite/assets', [CoreMicrositeController::class, 'upload'])->middleware('permission:events.update')->name('events.microsite.assets');
         Route::post('events/{event}/microsite/publish', [CoreMicrositeController::class, 'publish'])->middleware('permission:events.publish')->name('events.microsite.publish');
+        Route::get('events/{event}/email', [CoreEventEmailController::class, 'edit'])->middleware('permission:emails.view')->name('events.email.edit');
+        Route::put('events/{event}/email', [CoreEventEmailController::class, 'update'])->middleware('permission:emails.create')->name('events.email.update');
+        Route::get('events/{event}/email/preview', [CoreEventEmailController::class, 'preview'])->middleware('permission:emails.view')->name('events.email.preview');
+        Route::post('events/{event}/email/test', [CoreEventEmailController::class, 'sendTest'])->middleware('permission:emails.send')->name('events.email.test');
+
+        Route::get('events/{event}/attendees', [CoreAttendeeController::class, 'index'])->middleware('permission:registrations.view')->name('events.attendees.index');
+        Route::get('events/{event}/attendees/create', [CoreAttendeeController::class, 'create'])->middleware('permission:registrations.create')->name('events.attendees.create');
+        Route::get('events/{event}/attendees/tickets/{ticket}/register', [CoreAttendeeController::class, 'register'])->middleware('permission:registrations.create')->name('events.attendees.register');
+        Route::post('events/{event}/attendees/tickets/{ticket}', [CoreAttendeeController::class, 'store'])->middleware('permission:registrations.create')->name('events.attendees.store');
+        Route::get('events/{event}/attendees/export', [CoreAttendeeController::class, 'export'])->middleware('permission:registrations.view')->name('events.attendees.export');
+        Route::get('events/{event}/attendees/{registration}', [CoreAttendeeController::class, 'show'])->middleware('permission:registrations.view')->name('events.attendees.show');
+        Route::get('events/{event}/attendees/{registration}/edit', [CoreAttendeeController::class, 'edit'])->middleware('permission:registrations.update')->name('events.attendees.edit');
+        Route::put('events/{event}/attendees/{registration}', [CoreAttendeeController::class, 'update'])->middleware('permission:registrations.update')->name('events.attendees.update');
+        Route::post('events/{event}/attendees/{registration}/resend', [CoreAttendeeController::class, 'resend'])->middleware('permission:registrations.update')->name('events.attendees.resend');
+        Route::patch('events/{event}/attendees/{registration}/cancel', [CoreAttendeeController::class, 'cancel'])->middleware('permission:registrations.update')->name('events.attendees.cancel');
+
+        Route::get('events/{event}/agendas', [CoreEventAgendaController::class, 'index'])->middleware('permission:events.update')->name('events.agendas.index');
+        Route::get('events/{event}/agendas/create', [CoreEventAgendaController::class, 'create'])->middleware('permission:events.update')->name('events.agendas.create');
+        Route::post('events/{event}/agendas', [CoreEventAgendaController::class, 'store'])->middleware('permission:events.update')->name('events.agendas.store');
+        Route::get('events/{event}/agendas/{agenda}', [CoreEventAgendaController::class, 'show'])->middleware('permission:events.update')->name('events.agendas.show');
+        Route::get('events/{event}/agendas/{agenda}/edit', [CoreEventAgendaController::class, 'edit'])->middleware('permission:events.update')->name('events.agendas.edit');
+        Route::put('events/{event}/agendas/{agenda}', [CoreEventAgendaController::class, 'update'])->middleware('permission:events.update')->name('events.agendas.update');
+        Route::delete('events/{event}/agendas/{agenda}', [CoreEventAgendaController::class, 'destroy'])->middleware('permission:events.update')->name('events.agendas.destroy');
+        Route::post('events/{event}/agendas/{agenda}/sessions', [CoreEventAgendaController::class, 'storeSession'])->middleware('permission:events.update')->name('events.agendas.sessions.store');
+        Route::get('events/{event}/agendas/{agenda}/sessions/{session}/edit', [CoreEventAgendaController::class, 'editSession'])->middleware('permission:events.update')->name('events.agendas.sessions.edit');
+        Route::put('events/{event}/agendas/{agenda}/sessions/{session}', [CoreEventAgendaController::class, 'updateSession'])->middleware('permission:events.update')->name('events.agendas.sessions.update');
+        Route::delete('events/{event}/agendas/{agenda}/sessions/{session}', [CoreEventAgendaController::class, 'destroySession'])->middleware('permission:events.update')->name('events.agendas.sessions.destroy');
+
+        Route::get('events/{event}/check-in', [CoreCheckInController::class, 'index'])->middleware('permission:attendance.scan')->name('events.check-in.index');
+        Route::post('events/{event}/check-in/scan', [CoreCheckInController::class, 'scan'])->middleware('permission:attendance.scan')->name('events.check-in.scan');
 
         Route::get('events/{event}/forms', [CoreRegistrationFormController::class, 'index'])->middleware('permission:registration_forms.manage')->name('events.forms.index');
+        Route::get('events/{event}/forms/create', [CoreRegistrationFormController::class, 'create'])->middleware('permission:registration_forms.manage')->name('events.forms.create');
         Route::post('events/{event}/forms', [CoreRegistrationFormController::class, 'store'])->middleware('permission:registration_forms.manage')->name('events.forms.store');
+        Route::get('events/{event}/forms/{form}/edit', [CoreRegistrationFormController::class, 'edit'])->middleware('permission:registration_forms.manage')->name('events.forms.edit');
+        Route::get('events/{event}/forms/{form}/preview', [CoreRegistrationFormController::class, 'preview'])->middleware('permission:registration_forms.manage')->name('events.forms.preview');
         Route::put('events/{event}/forms/{form}', [CoreRegistrationFormController::class, 'update'])->middleware('permission:registration_forms.manage')->name('events.forms.update');
+        Route::delete('events/{event}/forms/{form}', [CoreRegistrationFormController::class, 'destroy'])->middleware('permission:registration_forms.manage')->name('events.forms.destroy');
 
         Route::get('events/{event}/tickets', [CoreTicketController::class, 'index'])->middleware('permission:events.update')->name('events.tickets.index');
+        Route::get('events/{event}/tickets/create', [CoreTicketController::class, 'create'])->middleware('permission:events.update')->name('events.tickets.create');
         Route::post('events/{event}/tickets', [CoreTicketController::class, 'store'])->middleware('permission:events.update')->name('events.tickets.store');
+        Route::get('events/{event}/tickets/{ticket}/edit', [CoreTicketController::class, 'edit'])->middleware('permission:events.update')->name('events.tickets.edit');
         Route::put('events/{event}/tickets/{ticket}', [CoreTicketController::class, 'update'])->middleware('permission:events.update')->name('events.tickets.update');
+        Route::delete('events/{event}/tickets/{ticket}', [CoreTicketController::class, 'destroy'])->middleware('permission:events.update')->name('events.tickets.destroy');
         Route::post('events/{event}/promos', [CoreTicketController::class, 'storePromo'])->middleware('permission:events.update')->name('events.promos.store');
         Route::put('events/{event}/promos/{promoCode}', [CoreTicketController::class, 'updatePromo'])->middleware('permission:events.update')->name('events.promos.update');
 
@@ -214,14 +270,9 @@ Route::middleware('auth')->group(function () {
         Route::post('events/{event}/reports', [CoreReportController::class, 'store'])->middleware('permission:reports.create')->name('events.reports.store');
         Route::get('events/{event}/reports/{report}/export', [CoreReportController::class, 'export'])->middleware('permission:reports.export')->name('events.reports.export');
 
-        Route::get('attendees', [CoreAttendeeController::class, 'index'])->middleware('permission:registrations.view')->name('attendees.index');
-        Route::post('attendees', [CoreAttendeeController::class, 'store'])->middleware('permission:registrations.create')->name('attendees.store');
-        Route::post('attendees/import', [CoreAttendeeController::class, 'import'])->middleware('permission:registrations.create')->name('attendees.import');
-        Route::post('attendees/{registration}/resend', [CoreAttendeeController::class, 'resend'])->middleware('permission:registrations.update')->name('attendees.resend');
-        Route::patch('attendees/{registration}/cancel', [CoreAttendeeController::class, 'cancel'])->middleware('permission:registrations.update')->name('attendees.cancel');
-        Route::get('attendees/export', [CoreAttendeeController::class, 'export'])->middleware('permission:registrations.view')->name('attendees.export');
+        Route::get('attendees', [FoundationController::class, 'attendees'])->middleware('permission:registrations.view')->name('attendees.index');
 
-        Route::get('emails', [CoreEmailController::class, 'index'])->middleware('permission:emails.view')->name('emails.index');
+        Route::get('emails', [FoundationController::class, 'emails'])->middleware('permission:emails.view')->name('emails.index');
         Route::post('emails/templates', [CoreEmailController::class, 'storeTemplate'])->middleware('permission:emails.create')->name('emails.templates.store');
         Route::post('emails/send', [CoreEmailController::class, 'send'])->middleware('permission:emails.send')->name('emails.send');
     });
