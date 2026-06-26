@@ -16,13 +16,14 @@ use Illuminate\View\View;
 
 class CoreEventController extends Controller
 {
-    public function show(Event $event, MicrositeService $microsite): View
+    public function show(Event $event, MicrositeService $microsite, ?string $referral = null): View
     {
         abort_unless($event->is_public, 404);
 
         return view('public.core.events.show', [
             'event' => $event->load('publishedPage.sections'),
             'tickets' => $microsite->activeVisibleTickets($event),
+            'referral' => $this->sanitizeReferral($referral),
         ]);
     }
 
@@ -41,10 +42,12 @@ class CoreEventController extends Controller
         abort_unless($ticket->event_id === $event->id && $event->is_public, 404);
         $data = $request->validated();
 
+        $referral = $this->sanitizeReferral($data['referral'] ?? null);
+
         if (! empty($data['participants'])) {
             $registrations = collect($data['participants'])
                 ->filter(fn (array $participant) => filled($participant['full_name'] ?? null) && filled($participant['email'] ?? null))
-                ->map(function (array $participant) use ($data, $event, $service, $ticket) {
+                ->map(function (array $participant) use ($data, $event, $referral, $service, $ticket) {
                     $answers = [];
                     $answerFiles = [];
 
@@ -63,6 +66,7 @@ class CoreEventController extends Controller
                         'organization' => $participant['organization'] ?? null,
                         'designation' => $participant['designation'] ?? null,
                         'promo_code' => $data['promo_code'] ?? null,
+                        'referral' => $referral,
                         'answers' => $answers,
                         'answer_files' => $answerFiles,
                     ]);
@@ -71,10 +75,26 @@ class CoreEventController extends Controller
             $registration = $registrations->first();
             abort_unless($registration, 422);
         } else {
-            $registration = $service->register($event, $ticket, $data);
+            $registration = $service->register($event, $ticket, [...$data, 'referral' => $referral]);
         }
 
         return redirect()->to(URL::signedRoute('core.public.success', $registration))->with('status', 'Registration confirmed. Please check your email for the e-ticket.');
+    }
+
+    private function sanitizeReferral(?string $value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+        $value = substr($value, 0, 100);
+
+        if ($value === '' || in_array(strtolower($value), ['n/a', 'na', 'null', 'nil', 'none'], true)) {
+            return null;
+        }
+
+        if (! preg_match('/^[a-zA-Z0-9_\-\.]+$/', $value)) {
+            return null;
+        }
+
+        return $value;
     }
 
     public function success(Registration $registration): View

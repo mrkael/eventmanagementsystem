@@ -82,15 +82,57 @@ class MicrositeService
         $content = preg_replace('/(href|src)\s*=\s*([\'"])\s*javascript:[^\'"]*\2/i', '$1="#"', $content) ?? '';
         $content = preg_replace_callback('/\sstyle\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', function (array $matches) {
             $style = trim($matches[1], '"\'');
+            $safe = $this->sanitizeStyle($style);
 
-            return preg_match('/^text-align\s*:\s*(left|center|right|justify)\s*;?$/i', $style)
-                ? ' style="'.e($style).'"'
-                : '';
+            return $safe !== '' ? ' style="'.e($safe).'"' : '';
         }, $content) ?? '';
-        $content = preg_replace('/\s(?!href\s*=|src\s*=|alt\s*=|title\s*=|target\s*=|rel\s*=|style\s*=)[a-z0-9:_-]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $content) ?? '';
-        $content = strip_tags($content, '<p><br><strong><b><em><i><u><h1><h2><h3><h4><ul><ol><li><a><img><div><span><blockquote>');
+        $content = preg_replace('/\s(?!href\s*=|src\s*=|alt\s*=|title\s*=|target\s*=|rel\s*=|style\s*=|class\s*=|colspan\s*=|rowspan\s*=|scope\s*=|border\s*=|cellpadding\s*=|cellspacing\s*=|width\s*=|height\s*=)[a-z0-9:_-]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $content) ?? '';
+        $content = strip_tags($content, '<p><br><strong><b><em><i><u><h1><h2><h3><h4><ul><ol><li><a><img><div><span><blockquote><table><thead><tbody><tfoot><tr><th><td><caption><col><colgroup>');
 
         return trim($content);
+    }
+
+    private function sanitizeStyle(string $style): string
+    {
+        $allowed = [
+            'text-align' => '/^(left|center|right|justify)$/i',
+            'float' => '/^(left|right|none)$/i',
+            'display' => '/^(block|table|table-cell|table-row|inline-block)$/i',
+            'border-collapse' => '/^(collapse|separate)$/i',
+            'border-spacing' => '/^\d+(\.\d+)?(px|em|rem)(\s+\d+(\.\d+)?(px|em|rem))?$/i',
+            'width' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
+            'min-width' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
+            'max-width' => '/^(auto|none|\d+(\.\d+)?(px|em|rem|%))$/i',
+            'padding' => '/^(\d+(\.\d+)?(px|em|rem|%)\s*){1,4}$/i',
+            'padding-top' => '/^\d+(\.\d+)?(px|em|rem|%)$/i',
+            'padding-right' => '/^\d+(\.\d+)?(px|em|rem|%)$/i',
+            'padding-bottom' => '/^\d+(\.\d+)?(px|em|rem|%)$/i',
+            'padding-left' => '/^\d+(\.\d+)?(px|em|rem|%)$/i',
+            'margin-left' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
+            'margin-right' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
+            'margin-top' => '/^\d+(\.\d+)?(px|em|rem|%)$/i',
+            'margin-bottom' => '/^\d+(\.\d+)?(px|em|rem|%)$/i',
+            'background-color' => '/^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i',
+            'color' => '/^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i',
+            'font-weight' => '/^(normal|bold|bolder|lighter|\d{3})$/i',
+            'font-size' => '/^\d+(\.\d+)?(px|em|rem|pt|%)$/i',
+            'vertical-align' => '/^(top|middle|bottom|baseline)$/i',
+        ];
+
+        $safe = [];
+        foreach (array_filter(array_map('trim', explode(';', $style))) as $part) {
+            $colon = strpos($part, ':');
+            if ($colon === false) {
+                continue;
+            }
+            $prop = strtolower(trim(substr($part, 0, $colon)));
+            $val = trim(substr($part, $colon + 1));
+            if (isset($allowed[$prop]) && preg_match($allowed[$prop], $val) && ! preg_match('/javascript:|expression\s*\(/i', $val)) {
+                $safe[] = $prop.': '.$val;
+            }
+        }
+
+        return $safe !== [] ? implode('; ', $safe).';' : '';
     }
 
     private function sanitizeSettings(array $settings): array

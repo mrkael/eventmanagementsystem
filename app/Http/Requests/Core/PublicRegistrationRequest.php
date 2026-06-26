@@ -24,6 +24,7 @@ class PublicRegistrationRequest extends FormRequest
             'organization' => ['nullable', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
             'promo_code' => ['nullable', 'string', 'max:60'],
+            'referral' => ['nullable', 'string', 'max:100'],
             'answers' => ['nullable', 'array'],
             'answer_files' => ['nullable', 'array'],
             'answer_files.*' => ['nullable', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx'],

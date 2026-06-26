@@ -61,6 +61,7 @@ class CoreRegistrationService
                 'discount_amount' => $pricing['discount'],
                 'final_amount' => $pricing['final'],
                 'promo_code' => $pricing['promo']?->code,
+                'referral' => $data['referral'] ?? null,
                 'qr_token_hash' => hash('sha256', $rawToken),
                 'registered_by' => $data['registered_by'] ?? null,
             ]);

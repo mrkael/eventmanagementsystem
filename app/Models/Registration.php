@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'event_id', 'ticket_id', 'registration_form_id', 'reference_number', 'full_name',
     'email', 'phone', 'organization', 'designation', 'status', 'payment_status',
-    'ticket_price', 'discount_amount', 'final_amount', 'promo_code', 'qr_token_hash', 'qr_token', 'qr_code_data', 'qr_generated_at',
+    'ticket_price', 'discount_amount', 'final_amount', 'promo_code', 'referral', 'qr_token_hash', 'qr_token', 'qr_code_data', 'qr_generated_at',
     'confirmation_email_sent_at', 'registered_by', 'cancelled_at',
 ])]
 class Registration extends Model

@@ -29,6 +29,89 @@
         @csrf
     </form>
 
+    <input type="file" id="wysiwyg-image-upload" accept="image/*" class="hidden">
+
+    <div id="wysiwyg-image-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);padding:1rem">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-base font-black text-slate-950">Insert Image</h3>
+                <button type="button" id="wysiwyg-image-close" aria-label="Close" class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="wysiwyg-image-dropzone" class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-blue-400 hover:bg-blue-50">
+                <svg class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <p class="text-sm font-bold text-slate-600">Click to upload or drag & drop</p>
+                <p class="text-xs text-slate-400">PNG, JPG, GIF, WebP — max 4 MB</p>
+            </div>
+            <p id="wysiwyg-image-status" class="mt-3 hidden text-sm font-semibold text-slate-600"></p>
+            <div class="mt-4 flex justify-end gap-2">
+                <button type="button" id="wysiwyg-image-cancel" class="ds-button-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="wysiwyg-img-settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);padding:1rem">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-base font-black text-slate-950">Image Settings</h3>
+                <button type="button" id="wysiwyg-img-settings-close" aria-label="Close" class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <label class="block">
+                    <span class="text-xs font-black uppercase text-slate-500">Alt Text</span>
+                    <input id="img-setting-alt" type="text" class="ds-input mt-1" placeholder="Describe the image">
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="block">
+                        <span class="text-xs font-black uppercase text-slate-500">Width (px)</span>
+                        <input id="img-setting-width" type="number" min="1" class="ds-input mt-1" placeholder="auto">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase text-slate-500">Height (px)</span>
+                        <input id="img-setting-height" type="number" min="1" class="ds-input mt-1" placeholder="auto">
+                    </label>
+                </div>
+                <label class="block">
+                    <span class="text-xs font-black uppercase text-slate-500">Alignment</span>
+                    <select id="img-setting-align" class="ds-input mt-1">
+                        <option value="">None</option>
+                        <option value="left">Float Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Float Right</option>
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="text-xs font-black uppercase text-slate-500">Link URL (optional)</span>
+                    <input id="img-setting-link" type="url" class="ds-input mt-1" placeholder="https://...">
+                </label>
+            </div>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" id="wysiwyg-img-settings-cancel" class="ds-button-secondary">Cancel</button>
+                <button type="button" id="wysiwyg-img-settings-save" class="ds-button-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="wysiwyg-source-backdrop" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5)"></div>
+    <div id="wysiwyg-source-panel" style="display:none;position:fixed;z-index:9999;flex-direction:column;overflow:hidden;border-radius:1rem;background:#fff;box-shadow:0 25px 50px -12px rgba(0,0,0,0.35)">
+        <div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-3">
+            <h3 class="text-sm font-black text-slate-950">Edit HTML Source</h3>
+            <button type="button" id="wysiwyg-source-close" aria-label="Close" class="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:0.75rem">
+            <textarea id="wysiwyg-source-textarea" style="width:100%;height:100%;resize:none;border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.75rem;font-family:ui-monospace,monospace;font-size:0.75rem;line-height:1.6;outline:none;background:#f8fafc;color:#0f172a" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+        </div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-slate-200 px-5 py-3">
+            <button type="button" id="wysiwyg-source-cancel" class="ds-button-secondary">Cancel</button>
+            <button type="button" id="wysiwyg-source-apply" class="ds-button-primary">Apply</button>
+        </div>
+    </div>
+
     @php
         $ticketPreviewData = $visibleTickets->map(fn ($ticket) => [
             'id' => $ticket->id,
@@ -141,8 +224,19 @@
             const sanitizeHtml = (value) => {
                 const template = document.createElement('template');
                 template.innerHTML = String(value ?? '');
-                const allowedTags = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'H1', 'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'A', 'IMG', 'DIV', 'SPAN', 'BLOCKQUOTE']);
-                const allowedAttrs = new Set(['href', 'src', 'alt', 'title', 'target', 'rel', 'class', 'style']);
+                const allowedTags = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'H1', 'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'A', 'IMG', 'DIV', 'SPAN', 'BLOCKQUOTE', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD', 'CAPTION', 'COLGROUP', 'COL']);
+                const allowedAttrs = new Set(['href', 'src', 'alt', 'title', 'target', 'rel', 'class', 'style', 'width', 'height', 'colspan', 'rowspan', 'scope', 'border', 'cellpadding', 'cellspacing']);
+                const safeStyleProps = { 'text-align': /^(left|center|right|justify)$/, 'float': /^(left|right|none)$/, 'display': /^(block|table|table-cell|table-row|inline-block)$/, 'margin-left': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'margin-right': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'margin-top': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'margin-bottom': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding': /^(\d+(\.\d+)?(px|em|rem|%) ?){1,4}$/, 'padding-top': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-right': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-bottom': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-left': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'border-collapse': /^(collapse|separate)$/, 'border-spacing': /^(\d+(\.\d+)?(px|em|rem) ?){1,2}$/, 'width': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'min-width': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'max-width': /^(auto|none|\d+(\.\d+)?(px|em|rem|%))$/, 'background-color': /^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i, 'color': /^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i, 'font-weight': /^(normal|bold|bolder|lighter|\d{3})$/, 'font-size': /^(\d+(\.\d+)?(px|em|rem|pt|%))$/, 'vertical-align': /^(top|middle|bottom|baseline)$/ };
+                const sanitizeStyle = (value) => {
+                    const safe = value.split(';').map(s => s.trim()).filter(Boolean).filter(part => {
+                        const colon = part.indexOf(':');
+                        if (colon < 0) return false;
+                        const prop = part.slice(0, colon).trim().toLowerCase();
+                        const val = part.slice(colon + 1).trim().toLowerCase();
+                        return safeStyleProps[prop]?.test(val) && !/javascript:|expression\(/i.test(val);
+                    });
+                    return safe.length ? safe.join('; ') + ';' : '';
+                };
                 [...template.content.querySelectorAll('script, style, iframe, object, embed')].forEach((node) => node.remove());
                 [...template.content.querySelectorAll('*')].forEach((node) => {
                     if (!allowedTags.has(node.tagName)) {
@@ -152,7 +246,13 @@
                     [...node.attributes].forEach((attr) => {
                         const name = attr.name.toLowerCase();
                         const value = attr.value.trim();
-                        if (name.startsWith('on') || !allowedAttrs.has(name) || /javascript:/i.test(value) || (name === 'style' && !/^text-align\s*:\s*(left|center|right|justify)\s*;?$/i.test(value))) {
+                        if (name.startsWith('on') || !allowedAttrs.has(name) || /javascript:/i.test(value)) {
+                            node.removeAttribute(attr.name);
+                        } else if (name === 'style') {
+                            const safe = sanitizeStyle(value);
+                            if (safe) node.setAttribute('style', safe);
+                            else node.removeAttribute('style');
+                        } else if ((name === 'width' || name === 'height') && !['IMG', 'TABLE', 'TD', 'TH', 'COL', 'COLGROUP'].includes(node.tagName)) {
                             node.removeAttribute(attr.name);
                         }
                     });
@@ -166,7 +266,7 @@
                 });
                 return template.innerHTML.trim();
             };
-            const richText = (value) => sanitizeHtml(value || '').replace(/\n/g, '<br>');
+            const richText = (value) => sanitizeHtml(value || '');
             const ensureCore = () => {
                 if (!sections.some((section) => section.type === 'ticket_selection')) {
                     sections.splice(Math.max(1, sections.length - 1), 0, { type: 'ticket_selection', title: 'Ticket & Form', content: 'Choose your ticket. The linked registration form will appear on this page.', settings: {} });
@@ -212,7 +312,7 @@
             };
 
             const isContentBlock = (section) => !['ticket_selection', 'registration_form'].includes(section.type);
-            const isEditing = (index) => Number(editingIndex) === Number(index);
+            const isEditing = (index) => editingIndex !== null && Number(editingIndex) === Number(index);
             const rowClasses = (index) => `group relative border border-slate-200 bg-white text-slate-950 transition hover:ring-1 hover:ring-blue-300 ${isEditing(index) ? 'ring-2 ring-blue-300' : ''}`;
             const rowToolbar = (index) => isEditing(index) ? `
                 <div data-row-toolbar="${index}" class="border-b border-slate-200 bg-slate-50 p-2">
@@ -233,7 +333,6 @@
                         <button type="button" data-wysiwyg-source class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Source</button>
                         <button type="button" data-close-row-editor="${index}" class="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Done</button>
                     </div>
-                    <textarea data-html-source="${index}" rows="5" class="ds-input mt-3 hidden font-mono text-xs" spellcheck="false"></textarea>
                 </div>
             ` : '';
             const titleBlock = (section, index, classes) => isEditing(index) && isContentBlock(section)
@@ -252,7 +351,18 @@
                 const buttonLabel = row.querySelector(`[data-setting-button-label="${index}"]`);
                 const buttonUrl = row.querySelector(`[data-setting-button-url="${index}"]`);
                 if (title) section.title = title.textContent.trim();
-                if (content) section.content = sanitizeHtml(content.innerHTML);
+                if (content) {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = content.innerHTML;
+                    let last;
+                    while ((last = tmp.lastChild)) {
+                        if (last.nodeType === Node.TEXT_NODE && !last.textContent.trim()) { tmp.removeChild(last); continue; }
+                        if (last.nodeType === Node.ELEMENT_NODE && last.tagName === 'BR') { tmp.removeChild(last); continue; }
+                        if (last.nodeType === Node.ELEMENT_NODE && (last.tagName === 'DIV' || last.tagName === 'P') && !last.textContent.trim() && !last.querySelector('img, table')) { tmp.removeChild(last); continue; }
+                        break;
+                    }
+                    section.content = sanitizeHtml(tmp.innerHTML);
+                }
                 section.settings = section.settings || {};
                 if (image) section.settings.image_url = image.value;
                 if (buttonLabel) section.settings.button_label = buttonLabel.value;
@@ -420,7 +530,6 @@
                 if (!toolbarButton) return;
 
                 const row = toolbarButton.closest('[data-row]');
-                const sourceEditor = row.querySelector('[data-html-source]');
                 const command = toolbarButton.closest('[data-wysiwyg-command]')?.dataset.wysiwygCommand;
                 const format = toolbarButton.closest('[data-wysiwyg-format]')?.dataset.wysiwygFormat;
                 if (command || format || toolbarButton.closest('[data-wysiwyg-link]') || toolbarButton.closest('[data-wysiwyg-image]')) {
@@ -435,13 +544,12 @@
                     if (url) document.execCommand('createLink', false, url);
                 }
                 if (toolbarButton.closest('[data-wysiwyg-image]')) {
-                    const url = window.prompt('Enter image URL');
-                    if (url) document.execCommand('insertImage', false, url);
+                    openImagePicker();
+                    return;
                 }
                 if (toolbarButton.closest('[data-wysiwyg-source]')) {
-                    sourceEditor.classList.toggle('hidden');
-                    sourceEditor.value = activeEditable.innerHTML;
-                    sourceEditor.focus();
+                    openSourceEditor();
+                    return;
                 }
                 activeEditable.innerHTML = sanitizeHtml(activeEditable.innerHTML);
                 syncRow(activeEditable.closest('[data-row]'));
@@ -451,22 +559,12 @@
                 const editable = event.target.closest('[data-editable-title], [data-editable-content]');
                 if (!editable) return;
                 activeEditable = editable;
-                const sourceEditor = editable.closest('[data-row]')?.querySelector('[data-html-source]');
-                if (sourceEditor) {
-                    sourceEditor.classList.add('hidden');
-                    sourceEditor.value = editable.innerHTML;
-                }
             });
 
             root.addEventListener('input', (event) => {
                 const editable = event.target.closest('[data-editable-title], [data-editable-content]');
                 const setting = event.target.closest('[data-setting-image], [data-setting-button-label], [data-setting-button-url]');
-                const sourceEditor = event.target.closest('[data-html-source]');
                 if (editable || setting) syncRow(event.target.closest('[data-row]'));
-                if (sourceEditor && activeEditable) {
-                    activeEditable.innerHTML = sanitizeHtml(sourceEditor.value);
-                    syncRow(activeEditable.closest('[data-row]'));
-                }
             });
 
             root.addEventListener('paste', (event) => {
@@ -479,6 +577,11 @@
             });
 
             canvas.addEventListener('dblclick', (event) => {
+                if (event.target.tagName === 'IMG' && event.target.closest('[data-editable-content]')) {
+                    event.preventDefault();
+                    openImgSettings(event.target);
+                    return;
+                }
                 const row = event.target.closest('[data-editable-row]');
                 if (!row) return;
                 const index = Number(row.dataset.row);
@@ -495,6 +598,215 @@
 
             root.addEventListener('submit', syncCanvas);
             render();
+
+            const sourceBackdrop = document.getElementById('wysiwyg-source-backdrop');
+            const sourcePanel = document.getElementById('wysiwyg-source-panel');
+            const sourceTextarea = document.getElementById('wysiwyg-source-textarea');
+            document.body.appendChild(sourceBackdrop);
+            document.body.appendChild(sourcePanel);
+            let sourceRowIndex = null;
+
+            const openSourceEditor = () => {
+                if (editingIndex === null) return;
+                const section = sections[editingIndex];
+                if (!section || !isContentBlock(section)) return;
+                const row = canvas.querySelector(`[data-row="${editingIndex}"]`);
+                if (!row) return;
+
+                const titleEl = row.querySelector(`[data-editable-title="${editingIndex}"]`);
+                const contentEl = row.querySelector(`[data-editable-content="${editingIndex}"]`);
+                const titleText = titleEl ? titleEl.textContent.trim() : (section.title || '');
+                const contentHtml = contentEl ? contentEl.innerHTML : (section.content || '');
+                sourceTextarea.value = (titleText ? `<h2>${escapeHtml(titleText)}</h2>\n` : '') + contentHtml;
+                sourceRowIndex = editingIndex;
+
+                const rect = row.getBoundingClientRect();
+                const gap = 6;
+                const top = Math.max(rect.top, gap);
+                const left = Math.max(rect.left, gap);
+                const width = Math.min(rect.width, window.innerWidth - left - gap);
+                const height = Math.min(Math.max(rect.height, 360), window.innerHeight - top - gap);
+                sourcePanel.style.top = top + 'px';
+                sourcePanel.style.left = left + 'px';
+                sourcePanel.style.width = width + 'px';
+                sourcePanel.style.height = height + 'px';
+
+                sourceBackdrop.style.display = 'block';
+                sourcePanel.style.display = 'flex';
+                window.setTimeout(() => sourceTextarea.focus(), 0);
+            };
+
+            const closeSourceModal = () => {
+                sourceBackdrop.style.display = 'none';
+                sourcePanel.style.display = 'none';
+                sourceRowIndex = null;
+            };
+
+            document.getElementById('wysiwyg-source-close').addEventListener('click', closeSourceModal);
+            document.getElementById('wysiwyg-source-cancel').addEventListener('click', closeSourceModal);
+            sourceBackdrop.addEventListener('click', closeSourceModal);
+            document.getElementById('wysiwyg-source-apply').addEventListener('click', () => {
+                const index = sourceRowIndex;
+                if (index === null || !sections[index]) { closeSourceModal(); return; }
+                const temp = document.createElement('div');
+                temp.innerHTML = sanitizeHtml(sourceTextarea.value);
+                const firstEl = temp.firstElementChild;
+                if (firstEl && /^H[1-4]$/.test(firstEl.tagName)) {
+                    sections[index].title = firstEl.textContent.trim();
+                    firstEl.remove();
+                }
+                sections[index].content = temp.innerHTML;
+                const row = canvas.querySelector(`[data-row="${index}"]`);
+                if (row) {
+                    const titleEl = row.querySelector(`[data-editable-title="${index}"]`);
+                    const contentEl = row.querySelector(`[data-editable-content="${index}"]`);
+                    if (titleEl) titleEl.textContent = sections[index].title || '';
+                    if (contentEl) contentEl.innerHTML = sections[index].content;
+                }
+                sync();
+                closeSourceModal();
+            });
+
+            const imageModal = document.getElementById('wysiwyg-image-modal');
+            const imageDropzone = document.getElementById('wysiwyg-image-dropzone');
+            const imageStatus = document.getElementById('wysiwyg-image-status');
+            const imageFileInput = document.getElementById('wysiwyg-image-upload');
+            const imgSettingsModal = document.getElementById('wysiwyg-img-settings-modal');
+            const uploadUrl = '{{ route('core.events.microsite.assets', $event) }}';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+            document.body.appendChild(imageModal);
+            document.body.appendChild(imgSettingsModal);
+            let savedRange = null;
+            let settingsTargetImg = null;
+
+            const openImagePicker = () => {
+                savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
+                imageStatus.textContent = '';
+                imageStatus.classList.add('hidden');
+                imageModal.style.display = 'flex';
+            };
+
+            const closeImageModal = () => {
+                imageModal.style.display = 'none';
+                imageFileInput.value = '';
+            };
+
+            const uploadAndInsert = async (file) => {
+                imageStatus.textContent = 'Uploading…';
+                imageStatus.classList.remove('hidden', 'text-red-700');
+                imageStatus.classList.add('text-slate-600');
+                const body = new FormData();
+                body.append('files[]', file);
+                body.append('_token', csrfToken);
+                try {
+                    const res = await fetch(uploadUrl, { method: 'POST', body });
+                    if (!res.ok) throw new Error(`Server error ${res.status}`);
+                    const json = await res.json();
+                    const url = json?.data?.[0];
+                    if (!url) throw new Error('No URL returned');
+                    if (activeEditable) {
+                        activeEditable.focus();
+                        if (savedRange) {
+                            const sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(savedRange);
+                        }
+                        document.execCommand('insertImage', false, url);
+                        activeEditable.innerHTML = sanitizeHtml(activeEditable.innerHTML);
+                        syncRow(activeEditable.closest('[data-row]'));
+                    }
+                    closeImageModal();
+                } catch (err) {
+                    imageStatus.textContent = `Upload failed: ${err.message}`;
+                    imageStatus.classList.remove('text-slate-600');
+                    imageStatus.classList.add('text-red-700');
+                }
+            };
+
+            document.getElementById('wysiwyg-image-close').addEventListener('click', closeImageModal);
+            document.getElementById('wysiwyg-image-cancel').addEventListener('click', closeImageModal);
+            imageModal.addEventListener('click', (e) => { if (e.target === imageModal) closeImageModal(); });
+            imageDropzone.addEventListener('click', () => imageFileInput.click());
+            imageFileInput.addEventListener('change', () => { const f = imageFileInput.files?.[0]; if (f) uploadAndInsert(f); });
+            imageDropzone.addEventListener('dragover', (e) => { e.preventDefault(); imageDropzone.classList.add('border-blue-400', 'bg-blue-50'); });
+            imageDropzone.addEventListener('dragleave', () => { imageDropzone.classList.remove('border-blue-400', 'bg-blue-50'); });
+            imageDropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                imageDropzone.classList.remove('border-blue-400', 'bg-blue-50');
+                const f = e.dataTransfer?.files?.[0];
+                if (f && f.type.startsWith('image/')) uploadAndInsert(f);
+            });
+
+            const openImgSettings = (img) => {
+                settingsTargetImg = img;
+                document.getElementById('img-setting-alt').value = img.getAttribute('alt') || '';
+                document.getElementById('img-setting-width').value = img.getAttribute('width') || '';
+                document.getElementById('img-setting-height').value = img.getAttribute('height') || '';
+                const style = img.getAttribute('style') || '';
+                let align = '';
+                if (/float\s*:\s*left/i.test(style)) align = 'left';
+                else if (/float\s*:\s*right/i.test(style)) align = 'right';
+                else if (/margin-left\s*:\s*auto/i.test(style) || /display\s*:\s*block/i.test(style)) align = 'center';
+                document.getElementById('img-setting-align').value = align;
+                const parent = img.parentElement;
+                document.getElementById('img-setting-link').value = (parent?.tagName === 'A') ? (parent.getAttribute('href') || '') : '';
+                imgSettingsModal.style.display = 'flex';
+            };
+
+            const closeImgSettings = () => {
+                imgSettingsModal.style.display = 'none';
+                settingsTargetImg = null;
+            };
+
+            document.getElementById('wysiwyg-img-settings-close').addEventListener('click', closeImgSettings);
+            document.getElementById('wysiwyg-img-settings-cancel').addEventListener('click', closeImgSettings);
+            imgSettingsModal.addEventListener('click', (e) => { if (e.target === imgSettingsModal) closeImgSettings(); });
+
+            document.getElementById('wysiwyg-img-settings-save').addEventListener('click', () => {
+                if (!settingsTargetImg) return;
+                const img = settingsTargetImg;
+                const alt = document.getElementById('img-setting-alt').value.trim();
+                const width = document.getElementById('img-setting-width').value.trim();
+                const height = document.getElementById('img-setting-height').value.trim();
+                const align = document.getElementById('img-setting-align').value;
+                const linkUrl = document.getElementById('img-setting-link').value.trim();
+
+                alt ? img.setAttribute('alt', alt) : img.removeAttribute('alt');
+                width ? img.setAttribute('width', width) : img.removeAttribute('width');
+                height ? img.setAttribute('height', height) : img.removeAttribute('height');
+
+                const styleParts = [];
+                if (align === 'left') { styleParts.push('float: left;', 'margin-right: 1em;'); }
+                else if (align === 'right') { styleParts.push('float: right;', 'margin-left: 1em;'); }
+                else if (align === 'center') { styleParts.push('display: block;', 'margin-left: auto;', 'margin-right: auto;'); }
+                img.setAttribute('style', styleParts.join(' '));
+                if (!styleParts.length) img.removeAttribute('style');
+
+                const editable = img.closest('[data-editable-content]');
+                const row = img.closest('[data-row]');
+
+                const currentParent = img.parentElement;
+                if (linkUrl) {
+                    if (currentParent?.tagName === 'A') {
+                        currentParent.setAttribute('href', linkUrl);
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = linkUrl;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        img.replaceWith(a);
+                        a.appendChild(img);
+                    }
+                } else if (currentParent?.tagName === 'A') {
+                    currentParent.replaceWith(img);
+                }
+
+                if (editable) {
+                    editable.innerHTML = sanitizeHtml(editable.innerHTML);
+                    syncRow(row);
+                }
+                closeImgSettings();
+            });
         })();
     </script>
 </x-layouts.admin>

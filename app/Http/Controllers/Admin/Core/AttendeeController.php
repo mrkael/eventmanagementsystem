@@ -137,6 +137,7 @@ class AttendeeController extends Controller
             'Registration Status',
             'Confirmation Email Sent At',
             'QR Status',
+            'Referral',
         ])->merge($dynamicColumns);
 
         $rows = $registrations->map(function (Registration $registration) use ($dynamicColumns) {
@@ -151,6 +152,7 @@ class AttendeeController extends Controller
                 $registration->status,
                 $registration->confirmation_email_sent_at?->format('Y-m-d H:i:s'),
                 $registration->qr_token ? 'Generated' : 'Missing',
+                $registration->referral ?? '',
             ])->merge($dynamicColumns->map(fn (string $column) => $this->answerValue($answers->get($column))))->values();
         });
 
