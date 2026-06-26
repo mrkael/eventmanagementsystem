@@ -6,6 +6,12 @@
     >
         <x-slot:actions>
             <a href="{{ route('core.organisers.index') }}" class="ds-button-secondary">Back to listing</a>
+            @if(auth()->user()->isPlatformAdmin())
+                <form method="POST" action="{{ route('core.organisers.resend-login', $profile) }}">
+                    @csrf
+                    <button type="submit" class="ds-button-secondary">Resend Login Access</button>
+                </form>
+            @endif
             <a href="{{ route('core.organisers.edit', $profile) }}" class="ds-button-primary">Edit Profile</a>
         </x-slot:actions>
     </x-ui.page-header>
@@ -32,6 +38,16 @@
                     <div><dt class="ds-label">Website</dt><dd class="mt-2">@if($profile->website)<a href="{{ $profile->website }}" target="_blank" class="font-semibold text-blue-700">{{ $profile->website }}</a>@else<span class="text-slate-500">-</span>@endif</dd></div>
                     <div><dt class="ds-label">Assigned Events Count</dt><dd class="mt-2 font-semibold text-slate-950">{{ number_format($profile->events_count) }}</dd></div>
                     <div><dt class="ds-label">Status</dt><dd class="mt-2 text-slate-700">{{ ucfirst($profile->status) }}</dd></div>
+                </dl>
+            </x-ui.card>
+
+            <x-ui.card>
+                <h2 class="text-xl font-semibold text-slate-950">Login access</h2>
+                <dl class="mt-5 grid gap-5 md:grid-cols-2">
+                    <div><dt class="ds-label">Access Status</dt><dd class="mt-2 font-semibold {{ $profile->user ? 'text-emerald-700' : 'text-amber-700' }}">{{ $profile->user ? 'Linked to user account' : 'No user account linked' }}</dd></div>
+                    <div><dt class="ds-label">Login Email</dt><dd class="mt-2 text-slate-700">{{ $profile->user?->email ?? '-' }}</dd></div>
+                    <div><dt class="ds-label">User Name</dt><dd class="mt-2 text-slate-700">{{ $profile->user?->name ?? '-' }}</dd></div>
+                    <div><dt class="ds-label">Role</dt><dd class="mt-2 text-slate-700">{{ $profile->user?->roles?->pluck('name')->join(', ') ?: '-' }}</dd></div>
                 </dl>
             </x-ui.card>
 

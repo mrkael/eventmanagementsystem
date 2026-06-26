@@ -81,6 +81,10 @@
                     <div role="status" aria-live="polite" class="mb-5 rounded-[20px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">{{ session('status') }}</div>
                 @endif
 
+                @if (session('warning'))
+                    <div role="status" aria-live="polite" class="mb-5 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">{{ session('warning') }}</div>
+                @endif
+
                 @if ($errors->any())
                     <div role="alert" class="mb-5 rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                         <p class="font-bold">Please review the highlighted issues.</p>

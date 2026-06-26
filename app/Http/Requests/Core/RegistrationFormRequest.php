@@ -62,6 +62,24 @@ class RegistrationFormRequest extends FormRequest
                         $validator->errors()->add("fields.{$index}.options", 'Options are required for dropdown, radio, and checkbox fields.');
                     }
                 }
+
+                foreach ($this->customQuestions() as $index => $question) {
+                    $label = trim((string) ($question['question_name'] ?? $question['label'] ?? ''));
+                    $type = (string) ($question['type'] ?? '');
+                    $options = $question['options'] ?? [];
+
+                    if ($label === '') {
+                        $validator->errors()->add("custom_questions.{$index}.question_name", 'Question name is required.');
+                    }
+
+                    if (! in_array($type, RegistrationFormField::TYPES, true)) {
+                        $validator->errors()->add("custom_questions.{$index}.type", 'Question type is invalid.');
+                    }
+
+                    if (in_array($type, ['dropdown', 'radio', 'checkbox'], true) && (! is_array($options) || count(array_filter($options)) === 0)) {
+                        $validator->errors()->add("custom_questions.{$index}.options", 'Options are required for dropdown, radio, and checkbox questions.');
+                    }
+                }
             },
         ];
     }

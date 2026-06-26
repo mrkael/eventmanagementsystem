@@ -9,23 +9,21 @@ class AttendancePolicy
 {
     public function view(User $user, Event $event): bool
     {
-        return $user->hasPermission('attendance.view')
-            || ($user->hasPermission('events.view') && $event->organizer_id === $user->id);
+        return $user->hasPermission('attendance.view') && $user->ownsEvent($event);
     }
 
     public function scan(User $user, Event $event): bool
     {
-        return $user->hasPermission('attendance.scan')
-            || ($user->hasPermission('events.update') && $event->organizer_id === $user->id);
+        return $user->hasPermission('attendance.scan') && $user->ownsEvent($event);
     }
 
     public function override(User $user, Event $event): bool
     {
-        return $user->hasPermission('attendance.override');
+        return $user->hasPermission('attendance.override') && $user->ownsEvent($event);
     }
 
     public function export(User $user, Event $event): bool
     {
-        return $user->hasPermission('attendance.export');
+        return $user->hasPermission('attendance.export') && $user->ownsEvent($event);
     }
 }

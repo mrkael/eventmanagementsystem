@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['event_id', 'created_by', 'updated_by', 'question_name', 'type', 'placeholder', 'error_text', 'options'])]
+#[Fillable(['event_id', 'created_by', 'updated_by', 'question_name', 'type', 'placeholder', 'error_text', 'is_required', 'options'])]
 class CustomQuestion extends Model
 {
     use HasFactory, SoftDeletes;
@@ -17,6 +17,7 @@ class CustomQuestion extends Model
     {
         return [
             'options' => 'array',
+            'is_required' => 'boolean',
         ];
     }
 

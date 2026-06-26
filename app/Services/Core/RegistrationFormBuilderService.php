@@ -80,7 +80,7 @@ class RegistrationFormBuilderService
                 continue;
             }
 
-            $event->customQuestions()->firstOrCreate(
+            $event->customQuestions()->updateOrCreate(
                 [
                     'question_name' => $name,
                     'type' => $type,
@@ -88,6 +88,7 @@ class RegistrationFormBuilderService
                 [
                     'placeholder' => $question['placeholder'] ?? null,
                     'error_text' => $question['error_text'] ?? null,
+                    'is_required' => (bool) ($question['is_required'] ?? false),
                     'options' => $this->cleanOptions($question['options'] ?? []),
                     'created_by' => $userId,
                     'updated_by' => $userId,

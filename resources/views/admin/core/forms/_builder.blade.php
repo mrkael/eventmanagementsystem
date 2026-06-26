@@ -9,7 +9,7 @@
         'type' => $question->type,
         'placeholder' => $question->placeholder,
         'error_text' => $question->error_text,
-        'is_required' => false,
+        'is_required' => $question->is_required,
         'options' => $question->options ?: [],
     ])->values()->all();
 @endphp
@@ -119,10 +119,18 @@
                     <span class="ds-label">Error Text</span>
                     <input data-custom-error class="ds-input mt-2" placeholder="Error text">
                 </label>
-                <label data-custom-options-wrap class="hidden">
-                    <span class="ds-label">Options</span>
-                    <textarea data-custom-options rows="4" class="ds-input mt-2 py-3" placeholder="One option per line"></textarea>
+                <label class="flex min-h-11 items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+                    <input type="checkbox" data-custom-required class="rounded border-slate-300 text-blue-700 focus:ring-blue-600">
+                    Required question
                 </label>
+                <div data-custom-options-wrap class="hidden">
+                    <span class="ds-label">Options</span>
+                    <div class="mt-2 flex gap-2">
+                        <input data-custom-option-input class="ds-input" placeholder="Add option">
+                        <button type="button" data-add-custom-option class="ds-button-secondary shrink-0">Add Option</button>
+                    </div>
+                    <div data-custom-options-list class="mt-3 space-y-2"></div>
+                </div>
                 <p data-custom-modal-error class="hidden text-sm font-semibold text-red-700"></p>
             </div>
             <div class="mt-6 flex justify-end gap-3">
@@ -161,11 +169,16 @@
         const modalError = root.querySelector('[data-custom-modal-error]');
         const customType = root.querySelector('[data-custom-type]');
         const customOptionsWrap = root.querySelector('[data-custom-options-wrap]');
+        const customOptionInput = root.querySelector('[data-custom-option-input]');
+        const customOptionsList = root.querySelector('[data-custom-options-list]');
+        const customRequired = root.querySelector('[data-custom-required]');
+        let customModalOptions = [];
         const optionTypes = ['dropdown', 'radio', 'checkbox'];
 
         const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
-        const optionText = (options) => (options || []).join('\n');
-        const cleanOptions = (value) => String(value || '').split(/\r?\n/).map((option) => option.trim()).filter(Boolean);
+        const cleanOptions = (value) => Array.isArray(value)
+            ? value.map((option) => String(option ?? '').trim()).filter(Boolean)
+            : String(value || '').split(/\r?\n/).map((option) => option.trim()).filter(Boolean);
         const stripState = (field) => {
             const { _expanded, ...clean } = field;
             return clean;
@@ -204,6 +217,37 @@
             return item;
         };
 
+        const fieldPreview = (field, index) => {
+            const uploadPreview = (label = 'Upload file') => `
+                <div class="mt-3 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                    <div class="mx-auto grid size-12 place-items-center rounded-2xl bg-white text-slate-500 shadow-sm">
+                        <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M5 20h14" /></svg>
+                    </div>
+                    <p class="mt-3 text-sm font-bold text-slate-700">${escapeHtml(label)}</p>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">Click to upload or drag and drop</p>
+                    <p class="mt-3 text-xs font-semibold text-slate-400">PDF, JPG, PNG, DOC, DOCX up to 10MB</p>
+                </div>
+            `;
+
+            if (field.type === 'textarea') {
+                return `<textarea disabled rows="3" class="ds-input mt-3 py-3" placeholder="${escapeHtml(field.placeholder || field.label)}"></textarea>`;
+            }
+            if (field.type === 'dropdown') {
+                return `<select disabled class="ds-input mt-3"><option>${escapeHtml(field.placeholder || 'Select an option')}</option>${(field.options || []).map((option) => `<option>${escapeHtml(option)}</option>`).join('')}</select>`;
+            }
+            if (field.type === 'radio') {
+                return `<div class="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">${(field.options || []).map((option) => `<label class="flex items-center gap-2 text-sm font-semibold text-slate-700"><input disabled type="radio" name="builder_preview_${index}" class="border-slate-300 text-blue-700"> ${escapeHtml(option)}</label>`).join('')}</div>`;
+            }
+            if (field.type === 'checkbox') {
+                return `<div class="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">${(field.options || []).map((option) => `<label class="flex items-center gap-2 text-sm font-semibold text-slate-700"><input disabled type="checkbox" class="rounded border-slate-300 text-blue-700"> ${escapeHtml(option)}</label>`).join('')}</div>`;
+            }
+            if (field.type === 'file') {
+                return uploadPreview(field.placeholder || 'Upload file');
+            }
+            const type = ['email', 'number', 'date'].includes(field.type) ? field.type : 'text';
+            return `<input disabled type="${type}" class="ds-input mt-3" placeholder="${escapeHtml(field.placeholder || field.label)}">`;
+        };
+
         const renderLibraries = () => {
             basicLibrary.innerHTML = '';
             customLibrary.innerHTML = '';
@@ -238,6 +282,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="font-bold text-slate-950">${escapeHtml(field.label)} ${field.is_required ? '<span class="text-red-600">*</span>' : ''}</p>
                             <p class="mt-1 text-xs font-semibold uppercase text-slate-400">${escapeHtml(field.type)}</p>
+                            ${fieldPreview(field, index)}
                         </div>
                         <div class="flex gap-2">
                             <button type="button" data-toggle-field="${index}" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700">${field._expanded ? 'Collapse' : 'Expand'}</button>
@@ -250,7 +295,23 @@
                         <label><span class="ds-label">Placeholder</span><input data-field-prop="placeholder" data-field-index="${index}" class="ds-input mt-2" value="${escapeHtml(field.placeholder)}"></label>
                         <label><span class="ds-label">Error Text</span><input data-field-prop="error_text" data-field-index="${index}" class="ds-input mt-2" value="${escapeHtml(field.error_text)}"></label>
                         <label class="flex min-h-11 items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700"><input type="checkbox" data-field-prop="is_required" data-field-index="${index}" ${field.is_required ? 'checked' : ''} class="rounded border-slate-300 text-blue-700 focus:ring-blue-600"> Required field</label>
-                        ${optionTypes.includes(field.type) ? `<label class="md:col-span-2"><span class="ds-label">Options</span><textarea data-field-prop="options" data-field-index="${index}" rows="4" class="ds-input mt-2 py-3">${escapeHtml(optionText(field.options))}</textarea></label>` : ''}
+                        ${optionTypes.includes(field.type) ? `
+                            <div class="md:col-span-2">
+                                <span class="ds-label">Options</span>
+                                <div class="mt-2 flex gap-2">
+                                    <input data-field-option-input="${index}" class="ds-input" placeholder="Add option">
+                                    <button type="button" data-add-field-option="${index}" class="ds-button-secondary shrink-0">Add Option</button>
+                                </div>
+                                <div class="mt-3 space-y-2">
+                                    ${(field.options || []).map((option, optionIndex) => `
+                                        <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700">
+                                            <span>${escapeHtml(option)}</span>
+                                            <button type="button" data-remove-field-option="${index}" data-option-index="${optionIndex}" class="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-700">Remove</button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
                 canvas.appendChild(item);
@@ -293,12 +354,30 @@
         root.addEventListener('click', (event) => {
             const toggle = event.target.closest('[data-toggle-field]');
             const remove = event.target.closest('[data-remove-field]');
+            const addFieldOption = event.target.closest('[data-add-field-option]');
+            const removeFieldOption = event.target.closest('[data-remove-field-option]');
             if (toggle) {
                 fields[Number(toggle.dataset.toggleField)]._expanded = !fields[Number(toggle.dataset.toggleField)]._expanded;
                 renderCanvas();
             }
             if (remove) {
                 fields.splice(Number(remove.dataset.removeField), 1);
+                renderCanvas();
+            }
+            if (addFieldOption) {
+                const index = Number(addFieldOption.dataset.addFieldOption);
+                const input = root.querySelector(`[data-field-option-input="${index}"]`);
+                const option = input?.value.trim();
+                if (option) {
+                    fields[index].options = cleanOptions([...(fields[index].options || []), option]);
+                    input.value = '';
+                    renderCanvas();
+                }
+            }
+            if (removeFieldOption) {
+                const index = Number(removeFieldOption.dataset.removeFieldOption);
+                const optionIndex = Number(removeFieldOption.dataset.optionIndex);
+                fields[index].options = (fields[index].options || []).filter((_, currentIndex) => currentIndex !== optionIndex);
                 renderCanvas();
             }
         });
@@ -308,7 +387,7 @@
             if (!input) return;
             const index = Number(input.dataset.fieldIndex);
             const prop = input.dataset.fieldProp;
-            fields[index][prop] = prop === 'options' ? cleanOptions(input.value) : input.value;
+            fields[index][prop] = input.value;
             syncPayload();
         });
 
@@ -321,12 +400,33 @@
             renderCanvas();
         });
 
+        const renderCustomModalOptions = () => {
+            customOptionsList.innerHTML = '';
+            customModalOptions.forEach((option, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700';
+                item.innerHTML = `<span>${escapeHtml(option)}</span><button type="button" data-remove-custom-option="${index}" class="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-700">Remove</button>`;
+                customOptionsList.appendChild(item);
+            });
+        };
+
+        const addCustomOption = () => {
+            const option = customOptionInput.value.trim();
+            if (!option) return;
+            customModalOptions = cleanOptions([...customModalOptions, option]);
+            customOptionInput.value = '';
+            renderCustomModalOptions();
+        };
+
         const resetModal = () => {
             modalError.classList.add('hidden');
             root.querySelector('[data-custom-name]').value = '';
             root.querySelector('[data-custom-placeholder]').value = '';
             root.querySelector('[data-custom-error]').value = '';
-            root.querySelector('[data-custom-options]').value = '';
+            customRequired.checked = false;
+            customModalOptions = [];
+            customOptionInput.value = '';
+            renderCustomModalOptions();
             customType.value = 'text';
             customOptionsWrap.classList.add('hidden');
         };
@@ -344,12 +444,30 @@
 
         customType.addEventListener('change', () => {
             customOptionsWrap.classList.toggle('hidden', !optionTypes.includes(customType.value));
+            if (!optionTypes.includes(customType.value)) {
+                customModalOptions = [];
+                renderCustomModalOptions();
+            }
+        });
+
+        root.querySelector('[data-add-custom-option]').addEventListener('click', addCustomOption);
+        customOptionInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addCustomOption();
+            }
+        });
+        customOptionsList.addEventListener('click', (event) => {
+            const remove = event.target.closest('[data-remove-custom-option]');
+            if (!remove) return;
+            customModalOptions = customModalOptions.filter((_, index) => index !== Number(remove.dataset.removeCustomOption));
+            renderCustomModalOptions();
         });
 
         root.querySelector('[data-save-custom-question]').addEventListener('click', () => {
             const name = root.querySelector('[data-custom-name]').value.trim();
             const type = customType.value;
-            const options = cleanOptions(root.querySelector('[data-custom-options]').value);
+            const options = cleanOptions(customModalOptions);
             if (!name || (optionTypes.includes(type) && options.length === 0)) {
                 modalError.textContent = !name ? 'Question name is required.' : 'Options are required for this question type.';
                 modalError.classList.remove('hidden');
@@ -364,7 +482,7 @@
                 placeholder: root.querySelector('[data-custom-placeholder]').value,
                 error_text: root.querySelector('[data-custom-error]').value,
                 options,
-                is_required: false,
+                is_required: customRequired.checked,
             };
             customFields.push(question);
             newCustomQuestions.push(question);

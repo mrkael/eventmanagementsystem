@@ -14,7 +14,7 @@ class EventPolicy
 
     public function view(User $user, Event $event): bool
     {
-        return $user->hasPermission('events.view') || $event->organizer_id === $user->id;
+        return $user->hasPermission('events.view') && $user->ownsEvent($event);
     }
 
     public function create(User $user): bool
@@ -24,12 +24,12 @@ class EventPolicy
 
     public function update(User $user, Event $event): bool
     {
-        return $user->hasPermission('events.update') || ($user->hasPermission('events.create') && $event->organizer_id === $user->id);
+        return $user->hasPermission('events.update') && $user->ownsEvent($event);
     }
 
     public function delete(User $user, Event $event): bool
     {
-        return $user->hasPermission('events.delete');
+        return $user->hasPermission('events.delete') && $user->ownsEvent($event);
     }
 
     public function submit(User $user, Event $event): bool
@@ -39,6 +39,6 @@ class EventPolicy
 
     public function publish(User $user, Event $event): bool
     {
-        return $user->hasPermission('events.publish');
+        return $user->hasPermission('events.publish') && $user->ownsEvent($event);
     }
 }

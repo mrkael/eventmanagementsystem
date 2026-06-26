@@ -188,6 +188,7 @@ Route::middleware('auth')->group(function () {
         Route::get('organisers/{organiser}', [CoreOrganiserProfileController::class, 'show'])->middleware('permission:organisers.view')->name('organisers.show');
         Route::get('organisers/{organiser}/edit', [CoreOrganiserProfileController::class, 'edit'])->middleware('permission:organisers.update')->name('organisers.edit');
         Route::put('organisers/{organiser}', [CoreOrganiserProfileController::class, 'update'])->middleware('permission:organisers.update')->name('organisers.update');
+        Route::post('organisers/{organiser}/resend-login', [CoreOrganiserProfileController::class, 'resendLogin'])->middleware('permission:organisers.update')->name('organisers.resend-login');
         Route::delete('organisers/{organiser}', [CoreOrganiserProfileController::class, 'destroy'])->middleware('permission:organisers.delete')->name('organisers.destroy');
 
         Route::get('contacts', [CoreContactController::class, 'index'])->middleware('permission:contacts.view')->name('contacts.index');

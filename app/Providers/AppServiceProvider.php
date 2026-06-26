@@ -31,11 +31,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ParticipantRegistration::class, ParticipantRegistrationPolicy::class);
         Gate::policy(RegistrationForm::class, RegistrationFormPolicy::class);
 
-        Gate::define('attendance.view', fn (User $user, Event $event) => $user->hasPermission('attendance.view')
-            || ($user->hasPermission('events.view') && $event->organizer_id === $user->id));
-        Gate::define('attendance.scan', fn (User $user, Event $event) => $user->hasPermission('attendance.scan')
-            || ($user->hasPermission('events.update') && $event->organizer_id === $user->id));
-        Gate::define('attendance.override', fn (User $user, Event $event) => $user->hasPermission('attendance.override'));
-        Gate::define('attendance.export', fn (User $user, Event $event) => $user->hasPermission('attendance.export'));
+        Gate::define('attendance.view', fn (User $user, Event $event) => $user->hasPermission('attendance.view') && $user->ownsEvent($event));
+        Gate::define('attendance.scan', fn (User $user, Event $event) => $user->hasPermission('attendance.scan') && $user->ownsEvent($event));
+        Gate::define('attendance.override', fn (User $user, Event $event) => $user->hasPermission('attendance.override') && $user->ownsEvent($event));
+        Gate::define('attendance.export', fn (User $user, Event $event) => $user->hasPermission('attendance.export') && $user->ownsEvent($event));
     }
 }

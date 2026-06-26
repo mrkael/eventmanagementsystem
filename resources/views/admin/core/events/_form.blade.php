@@ -13,12 +13,22 @@
                 </label>
                 <label>
                     <span class="ds-label">Organiser Profile</span>
-                    <select name="organiser_profile_id" required class="ds-input mt-2">
-                        <option value="">Select organiser</option>
-                        @foreach(($organiserProfiles ?? collect()) as $profile)
-                            <option value="{{ $profile->id }}" @selected(old('organiser_profile_id', $event?->organiser_profile_id) == $profile->id)>{{ $profile->name }} · {{ $profile->email }}</option>
-                        @endforeach
-                    </select>
+                    @if($isPlatformAdmin ?? false)
+                        <select name="organiser_profile_id" required class="ds-input mt-2">
+                            <option value="">Select organiser</option>
+                            @foreach(($organiserProfiles ?? collect()) as $profile)
+                                <option value="{{ $profile->id }}" @selected(old('organiser_profile_id', $event?->organiser_profile_id) == $profile->id)>{{ $profile->name }} - {{ $profile->email }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <input type="hidden" name="organiser_profile_id" value="{{ $ownOrganiserProfile?->id }}">
+                        <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+                            {{ $ownOrganiserProfile?->name ?? 'No organiser profile linked' }}
+                            @if($ownOrganiserProfile?->email)
+                                <span class="block pt-1 text-xs font-semibold text-slate-500">{{ $ownOrganiserProfile->email }}</span>
+                            @endif
+                        </div>
+                    @endif
                     @error('organiser_profile_id')<span class="mt-2 block text-sm font-semibold text-red-700">{{ $message }}</span>@enderror
                 </label>
                 <label>

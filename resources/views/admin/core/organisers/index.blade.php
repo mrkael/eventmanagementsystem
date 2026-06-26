@@ -5,7 +5,9 @@
         description="Create and manage organiser identities. Each profile can be assigned to events later and its email will be used as the sender address for future event communications."
     >
         <x-slot:actions>
-            <a href="{{ route('core.organisers.create') }}" class="ds-button-primary"><x-ui.icon name="plus" class="size-4" /> Create New Profile</a>
+            @if($isPlatformAdmin ?? false)
+                <a href="{{ route('core.organisers.create') }}" class="ds-button-primary"><x-ui.icon name="plus" class="size-4" /> Create New Profile</a>
+            @endif
         </x-slot:actions>
     </x-ui.page-header>
 
@@ -41,6 +43,7 @@
                         <th class="px-5 py-4">Phone Number</th>
                         <th class="px-5 py-4">Website</th>
                         <th class="px-5 py-4">Status</th>
+                        <th class="px-5 py-4">Login Access</th>
                         <th class="px-5 py-4">Assigned Events</th>
                         <th class="px-5 py-4">
                             <a href="{{ route('core.organisers.index', array_merge(request()->except(['sort', 'direction', 'page']), ['sort' => 'created_at', 'direction' => $sort === 'created_at' && $direction === 'asc' ? 'desc' : 'asc'])) }}">Created Date</a>
@@ -65,22 +68,36 @@
                             <td class="px-5 py-4 text-slate-600">{{ $profile->phone ?: '-' }}</td>
                             <td class="px-5 py-4">@if($profile->website)<a href="{{ $profile->website }}" target="_blank" class="font-semibold text-blue-700">Open</a>@else<span class="text-slate-400">-</span>@endif</td>
                             <td class="px-5 py-4"><span class="rounded-full px-3 py-1 text-xs font-bold {{ $profile->status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">{{ ucfirst($profile->status) }}</span></td>
+                            <td class="px-5 py-4">
+                                @if($profile->user)
+                                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Linked</span>
+                                    <p class="mt-1 text-xs text-slate-500">{{ $profile->user->email }}</p>
+                                @else
+                                    <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Not linked</span>
+                                @endif
+                            </td>
                             <td class="px-5 py-4 font-semibold text-slate-700">{{ number_format($profile->events_count) }}</td>
                             <td class="px-5 py-4 text-slate-500">{{ $profile->created_at->format('d M Y') }}</td>
                             <td class="px-5 py-4">
                                 <div class="flex justify-end gap-2">
                                     <a href="{{ route('core.organisers.edit', $profile) }}" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-white">Edit</a>
-                                    <form method="POST" action="{{ route('core.organisers.destroy', $profile) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Delete</button>
-                                    </form>
+                                    @if($isPlatformAdmin ?? false)
+                                        <form method="POST" action="{{ route('core.organisers.resend-login', $profile) }}">
+                                            @csrf
+                                            <button type="submit" class="rounded-full border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">Resend Login</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('core.organisers.destroy', $profile) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Delete</button>
+                                        </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-5 py-10">
+                            <td colspan="9" class="px-5 py-10">
                                 <x-ui.empty-state icon="building" title="No organiser profiles found" description="Create your first organiser profile to prepare sender identity for future event emails." />
                             </td>
                         </tr>

@@ -69,10 +69,40 @@ class MicrositeService
             return [
                 'type' => $type,
                 'title' => Str::limit((string) ($section['title'] ?? ucfirst(str_replace('_', ' ', $type))), 255, ''),
-                'content' => (string) ($section['content'] ?? ''),
-                'settings' => is_array($section['settings'] ?? null) ? $section['settings'] : [],
+                'content' => $this->sanitizeContent((string) ($section['content'] ?? '')),
+                'settings' => $this->sanitizeSettings(is_array($section['settings'] ?? null) ? $section['settings'] : []),
             ];
         })->values()->all();
+    }
+
+    private function sanitizeContent(string $content): string
+    {
+        $content = preg_replace('#<(script|style|iframe|object|embed)[^>]*>.*?</\1>#is', '', $content) ?? '';
+        $content = preg_replace('/\son[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $content) ?? '';
+        $content = preg_replace('/(href|src)\s*=\s*([\'"])\s*javascript:[^\'"]*\2/i', '$1="#"', $content) ?? '';
+        $content = preg_replace_callback('/\sstyle\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', function (array $matches) {
+            $style = trim($matches[1], '"\'');
+
+            return preg_match('/^text-align\s*:\s*(left|center|right|justify)\s*;?$/i', $style)
+                ? ' style="'.e($style).'"'
+                : '';
+        }, $content) ?? '';
+        $content = preg_replace('/\s(?!href\s*=|src\s*=|alt\s*=|title\s*=|target\s*=|rel\s*=|style\s*=)[a-z0-9:_-]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $content) ?? '';
+        $content = strip_tags($content, '<p><br><strong><b><em><i><u><h1><h2><h3><h4><ul><ol><li><a><img><div><span><blockquote>');
+
+        return trim($content);
+    }
+
+    private function sanitizeSettings(array $settings): array
+    {
+        return collect($settings)->mapWithKeys(function ($value, $key) {
+            if (is_string($value)) {
+                $value = preg_replace('/javascript:/i', '', $value) ?? '';
+                $value = strip_tags($value);
+            }
+
+            return [$key => $value];
+        })->all();
     }
 
     public function defaultSections(Event $event): array

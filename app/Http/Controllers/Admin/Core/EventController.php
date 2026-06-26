@@ -18,11 +18,16 @@ class EventController extends Controller
 {
     public function index(Request $request): View
     {
+        $user = $request->user();
+        $isPlatformAdmin = $user->isPlatformAdmin();
+        $organiserProfile = $user->organiserProfile;
+
         $events = Event::query()
             ->with('organiserProfile')
             ->withCount('tickets')
+            ->when(! $isPlatformAdmin, fn ($query) => $query->where('organiser_profile_id', $organiserProfile?->id ?? 0))
             ->when($request->filled('search'), fn ($query) => $query->where('title', 'like', "%{$request->search}%"))
-            ->when($request->filled('organiser_profile_id'), fn ($query) => $query->where('organiser_profile_id', $request->organiser_profile_id))
+            ->when($isPlatformAdmin && $request->filled('organiser_profile_id'), fn ($query) => $query->where('organiser_profile_id', $request->organiser_profile_id))
             ->when($request->filled('status'), fn ($query) => $query->where('status_key', $request->status))
             ->latest()
             ->paginate(12)
@@ -30,15 +35,20 @@ class EventController extends Controller
 
         return view('admin.core.events.index', [
             'events' => $events,
-            'organiserProfiles' => OrganiserProfile::orderBy('name')->get(),
+            'organiserProfiles' => $isPlatformAdmin ? OrganiserProfile::orderBy('name')->get() : collect([$organiserProfile])->filter(),
             'statuses' => ['draft', 'submitted', 'published'],
+            'isPlatformAdmin' => $isPlatformAdmin,
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $isPlatformAdmin = $request->user()->isPlatformAdmin();
+
         return view('admin.core.events.create', [
-            'organiserProfiles' => OrganiserProfile::where('status', 'active')->orderBy('name')->get(),
+            'organiserProfiles' => $this->availableOrganiserProfiles($request),
+            'isPlatformAdmin' => $isPlatformAdmin,
+            'ownOrganiserProfile' => $request->user()->organiserProfile,
         ]);
     }
 
@@ -59,9 +69,13 @@ class EventController extends Controller
 
     public function edit(Event $event): View
     {
+        $isPlatformAdmin = request()->user()->isPlatformAdmin();
+
         return view('admin.core.events.edit', [
             'event' => $event,
-            'organiserProfiles' => OrganiserProfile::where('status', 'active')->orderBy('name')->get(),
+            'organiserProfiles' => $this->availableOrganiserProfiles(request()),
+            'isPlatformAdmin' => $isPlatformAdmin,
+            'ownOrganiserProfile' => request()->user()->organiserProfile,
         ]);
     }
 
@@ -79,9 +93,13 @@ class EventController extends Controller
         $type = EventType::firstOrCreate(['slug' => 'standard'], ['name' => 'Standard', 'is_active' => true]);
         $status = EventStatus::firstOrCreate(['key' => 'draft'], ['name' => 'Draft', 'is_active' => true]);
 
+        $organiserProfileId = $request->user()->isPlatformAdmin()
+            ? $request->integer('organiser_profile_id')
+            : $request->user()->organiserProfile?->id;
+
         return [
             'organizer_id' => $request->user()->id,
-            'organiser_profile_id' => $request->organiser_profile_id,
+            'organiser_profile_id' => $organiserProfileId,
             'event_category_id' => $category->id,
             'event_type_id' => $type->id,
             'event_status_id' => $status->id,
@@ -102,5 +120,14 @@ class EventController extends Controller
             'updated_by' => $request->user()->id,
             ...($request->isMethod('post') ? ['created_by' => $request->user()->id] : []),
         ];
+    }
+
+    private function availableOrganiserProfiles(Request $request)
+    {
+        if ($request->user()->isPlatformAdmin()) {
+            return OrganiserProfile::where('status', 'active')->orderBy('name')->get();
+        }
+
+        return collect([$request->user()->organiserProfile])->filter();
     }
 }

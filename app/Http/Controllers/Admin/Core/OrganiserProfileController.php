@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Core\OrganiserProfileRequest;
 use App\Models\OrganiserProfile;
 use App\Services\AuditLogger;
+use App\Services\Core\OrganiserLoginAccessService;
 use App\Services\Core\OrganiserProfileService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,8 +20,9 @@ class OrganiserProfileController extends Controller
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
         $profiles = OrganiserProfile::query()
-            ->with('creator')
+            ->with('creator', 'user.roles')
             ->withCount('events')
+            ->when(! $request->user()->isPlatformAdmin(), fn ($query) => $query->where('user_id', $request->user()->id))
             ->when($request->filled('search'), fn ($query) => $query->where(function ($query) use ($request) {
                 $query->where('name', 'like', "%{$request->search}%")
                     ->orWhere('email', 'like', "%{$request->search}%");
@@ -30,31 +32,46 @@ class OrganiserProfileController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('admin.core.organisers.index', compact('profiles', 'sort', 'direction'));
+        return view('admin.core.organisers.index', [
+            'profiles' => $profiles,
+            'sort' => $sort,
+            'direction' => $direction,
+            'isPlatformAdmin' => $request->user()->isPlatformAdmin(),
+        ]);
     }
 
     public function create(): View
     {
+        abort_unless(request()->user()->isPlatformAdmin(), 403);
+
         return view('admin.core.organisers.create');
     }
 
     public function store(OrganiserProfileRequest $request, OrganiserProfileService $service, AuditLogger $auditLogger): RedirectResponse
     {
+        abort_unless($request->user()->isPlatformAdmin(), 403);
+
         $profile = $service->create($request->validated(), $request->user()->id);
         $auditLogger->record('organisers.create', "Created organiser profile {$profile->name}.", $profile);
 
-        return redirect()->route('core.organisers.show', $profile)->with('status', 'Organiser profile created.');
+        return redirect()
+            ->route('core.organisers.show', $profile)
+            ->with($service->lastLoginAccessResult['sent'] ? 'status' : 'warning', 'Organiser profile created. '.$service->lastLoginAccessResult['message']);
     }
 
     public function show(OrganiserProfile $organiser): View
     {
+        abort_unless(request()->user()->isPlatformAdmin() || $organiser->user_id === request()->user()->id, 403);
+
         return view('admin.core.organisers.show', [
-            'profile' => $organiser->load('creator', 'updater')->loadCount('events'),
+            'profile' => $organiser->load('creator', 'updater', 'user.roles')->loadCount('events'),
         ]);
     }
 
     public function edit(OrganiserProfile $organiser): View
     {
+        abort_unless(request()->user()->isPlatformAdmin() || $organiser->user_id === request()->user()->id, 403);
+
         return view('admin.core.organisers.edit', [
             'profile' => $organiser,
         ]);
@@ -62,6 +79,8 @@ class OrganiserProfileController extends Controller
 
     public function update(OrganiserProfileRequest $request, OrganiserProfile $organiser, OrganiserProfileService $service, AuditLogger $auditLogger): RedirectResponse
     {
+        abort_unless($request->user()->isPlatformAdmin() || $organiser->user_id === $request->user()->id, 403);
+
         $oldValues = $organiser->only(['name', 'email', 'phone', 'website', 'address', 'description', 'logo_path', 'status']);
         $profile = $service->update($organiser, $request->validated(), $request->user()->id);
         $auditLogger->record('organisers.update', "Updated organiser profile {$profile->name}.", $profile, $oldValues, $profile->only(array_keys($oldValues)));
@@ -71,9 +90,21 @@ class OrganiserProfileController extends Controller
 
     public function destroy(OrganiserProfile $organiser, OrganiserProfileService $service, AuditLogger $auditLogger): RedirectResponse
     {
+        abort_unless(request()->user()->isPlatformAdmin(), 403);
+
         $auditLogger->record('organisers.delete', "Deleted organiser profile {$organiser->name}.", $organiser);
         $service->delete($organiser);
 
         return redirect()->route('core.organisers.index')->with('status', 'Organiser profile deleted.');
+    }
+
+    public function resendLogin(OrganiserProfile $organiser, OrganiserLoginAccessService $service, AuditLogger $auditLogger): RedirectResponse
+    {
+        abort_unless(request()->user()->isPlatformAdmin(), 403);
+
+        $result = $service->resendAccess($organiser);
+        $auditLogger->record('organisers.login_access.resend', "Resent organiser login access for {$organiser->name}.", $organiser);
+
+        return back()->with($result['sent'] ? 'status' : 'warning', $result['message']);
     }
 }

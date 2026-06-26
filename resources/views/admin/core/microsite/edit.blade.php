@@ -94,12 +94,15 @@
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h2 class="text-lg font-black text-slate-950">Event Site Canvas</h2>
-                            <p class="mt-1 text-sm text-slate-500">Double click a section to edit. Ticket & Form stays connected to event tickets and assigned forms.</p>
+                            <p class="mt-1 text-sm text-slate-500">Click inside any normal content block to edit inline. Ticket & Form stays connected to event tickets and assigned forms.</p>
                         </div>
                         <button type="button" data-add-row class="ds-button-secondary">Add New Row</button>
                     </div>
                 </div>
                 <div data-canvas class="min-h-[640px] bg-slate-50 p-5"></div>
+                <div class="flex justify-end border-t border-slate-200 bg-white px-5 py-4">
+                    <button type="button" data-add-row class="ds-button-primary">Add New Row</button>
+                </div>
             </div>
 
             <aside class="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -118,41 +121,6 @@
             </aside>
         </div>
         @error('sections')<span class="mt-3 block text-sm font-semibold text-red-700">{{ $message }}</span>@enderror
-
-        <div data-editor-panel class="fixed inset-0 z-50 hidden bg-slate-950/50 p-4 backdrop-blur-sm">
-            <div class="ml-auto flex h-full max-w-xl flex-col rounded-[28px] bg-white shadow-2xl">
-                <div class="border-b border-slate-200 p-5">
-                    <p class="text-xs font-black uppercase text-blue-600">Section editor</p>
-                    <h3 data-editor-heading class="mt-1 text-xl font-black text-slate-950">Edit Section</h3>
-                </div>
-                <div class="flex-1 space-y-4 overflow-y-auto p-5">
-                    <label class="block">
-                        <span class="ds-label">Title</span>
-                        <input data-edit-title class="ds-input mt-2">
-                    </label>
-                    <label class="block">
-                        <span class="ds-label">Content</span>
-                        <textarea data-edit-content rows="7" class="ds-input mt-2 py-3"></textarea>
-                    </label>
-                    <label data-image-field class="block">
-                        <span class="ds-label">Image URL</span>
-                        <input data-edit-image class="ds-input mt-2" placeholder="https://...">
-                    </label>
-                    <label data-button-field class="block">
-                        <span class="ds-label">Button Label</span>
-                        <input data-edit-button-label class="ds-input mt-2" placeholder="Register now">
-                    </label>
-                    <label data-button-field class="block">
-                        <span class="ds-label">Button Link</span>
-                        <input data-edit-button-url class="ds-input mt-2" placeholder="#tickets">
-                    </label>
-                </div>
-                <div class="flex gap-3 border-t border-slate-200 p-5">
-                    <button type="button" data-save-edit class="ds-button-primary flex-1 justify-center">Apply Changes</button>
-                    <button type="button" data-close-edit class="ds-button-secondary flex-1 justify-center">Cancel</button>
-                </div>
-            </div>
-        </div>
     </form>
 
     <script>
@@ -165,12 +133,40 @@
             const current = JSON.parse(root.dataset.currentSections || '[]');
             const canvas = root.querySelector('[data-canvas]');
             const field = root.querySelector('[data-sections-json]');
-            const panel = root.querySelector('[data-editor-panel]');
             let sections = current.length ? current : defaults;
+            let activeEditable = null;
             let editingIndex = null;
 
             const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
-            const text = (value) => escapeHtml(value || '').replace(/\n/g, '<br>');
+            const sanitizeHtml = (value) => {
+                const template = document.createElement('template');
+                template.innerHTML = String(value ?? '');
+                const allowedTags = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'H1', 'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'A', 'IMG', 'DIV', 'SPAN', 'BLOCKQUOTE']);
+                const allowedAttrs = new Set(['href', 'src', 'alt', 'title', 'target', 'rel', 'class', 'style']);
+                [...template.content.querySelectorAll('script, style, iframe, object, embed')].forEach((node) => node.remove());
+                [...template.content.querySelectorAll('*')].forEach((node) => {
+                    if (!allowedTags.has(node.tagName)) {
+                        node.replaceWith(...node.childNodes);
+                        return;
+                    }
+                    [...node.attributes].forEach((attr) => {
+                        const name = attr.name.toLowerCase();
+                        const value = attr.value.trim();
+                        if (name.startsWith('on') || !allowedAttrs.has(name) || /javascript:/i.test(value) || (name === 'style' && !/^text-align\s*:\s*(left|center|right|justify)\s*;?$/i.test(value))) {
+                            node.removeAttribute(attr.name);
+                        }
+                    });
+                    if (node.tagName === 'A') {
+                        node.setAttribute('rel', 'noopener noreferrer');
+                        if (!node.getAttribute('target')) node.setAttribute('target', '_blank');
+                    }
+                    if (node.tagName === 'IMG') {
+                        node.classList.add('rounded-2xl');
+                    }
+                });
+                return template.innerHTML.trim();
+            };
+            const richText = (value) => sanitizeHtml(value || '').replace(/\n/g, '<br>');
             const ensureCore = () => {
                 if (!sections.some((section) => section.type === 'ticket_selection')) {
                     sections.splice(Math.max(1, sections.length - 1), 0, { type: 'ticket_selection', title: 'Ticket & Form', content: 'Choose your ticket. The linked registration form will appear on this page.', settings: {} });
@@ -215,69 +211,166 @@
                 `).join('');
             };
 
+            const isContentBlock = (section) => !['ticket_selection', 'registration_form'].includes(section.type);
+            const isEditing = (index) => Number(editingIndex) === Number(index);
+            const rowClasses = (index) => `group relative border border-slate-200 bg-white text-slate-950 transition hover:ring-1 hover:ring-blue-300 ${isEditing(index) ? 'ring-2 ring-blue-300' : ''}`;
+            const rowToolbar = (index) => isEditing(index) ? `
+                <div data-row-toolbar="${index}" class="border-b border-slate-200 bg-slate-50 p-2">
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" data-wysiwyg-format="p" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">P</button>
+                        <button type="button" data-wysiwyg-format="h2" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">H2</button>
+                        <button type="button" data-wysiwyg-format="h3" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">H3</button>
+                        <button type="button" data-wysiwyg-command="bold" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">B</button>
+                        <button type="button" data-wysiwyg-command="italic" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black italic text-slate-700 hover:bg-slate-50">I</button>
+                        <button type="button" data-wysiwyg-command="underline" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black underline text-slate-700 hover:bg-slate-50">U</button>
+                        <button type="button" data-wysiwyg-command="insertUnorderedList" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">List</button>
+                        <button type="button" data-wysiwyg-command="insertOrderedList" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">1. List</button>
+                        <button type="button" data-wysiwyg-command="justifyLeft" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Left</button>
+                        <button type="button" data-wysiwyg-command="justifyCenter" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Center</button>
+                        <button type="button" data-wysiwyg-command="justifyRight" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Right</button>
+                        <button type="button" data-wysiwyg-link class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Link</button>
+                        <button type="button" data-wysiwyg-image class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Image</button>
+                        <button type="button" data-wysiwyg-source class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Source</button>
+                        <button type="button" data-close-row-editor="${index}" class="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Done</button>
+                    </div>
+                    <textarea data-html-source="${index}" rows="5" class="ds-input mt-3 hidden font-mono text-xs" spellcheck="false"></textarea>
+                </div>
+            ` : '';
+            const titleBlock = (section, index, classes) => isEditing(index) && isContentBlock(section)
+                ? `<div data-editable-title="${index}" contenteditable="true" class="${classes} outline-none">${escapeHtml(section.title || '')}</div>`
+                : `<div class="${classes}">${escapeHtml(section.title || '')}</div>`;
+            const contentBlock = (section, index, classes, fallback = '') => isEditing(index) && isContentBlock(section)
+                ? `<div data-editable-content="${index}" contenteditable="true" class="${classes} min-h-64 outline-none">${richText(section.content || fallback)}</div>`
+                : `<div class="${classes}">${richText(section.content || fallback)}</div>`;
+            const syncRow = (row) => {
+                const index = Number(row?.dataset.row);
+                const section = sections[index];
+                if (!section || !isContentBlock(section)) return;
+                const title = row.querySelector(`[data-editable-title="${index}"]`);
+                const content = row.querySelector(`[data-editable-content="${index}"]`);
+                const image = row.querySelector(`[data-setting-image="${index}"]`);
+                const buttonLabel = row.querySelector(`[data-setting-button-label="${index}"]`);
+                const buttonUrl = row.querySelector(`[data-setting-button-url="${index}"]`);
+                if (title) section.title = title.textContent.trim();
+                if (content) section.content = sanitizeHtml(content.innerHTML);
+                section.settings = section.settings || {};
+                if (image) section.settings.image_url = image.value;
+                if (buttonLabel) section.settings.button_label = buttonLabel.value;
+                if (buttonUrl) section.settings.button_url = buttonUrl.value;
+                sync();
+            };
+            const syncCanvas = () => {
+                canvas.querySelectorAll('[data-row]').forEach(syncRow);
+                sync();
+            };
+
             const sectionMarkup = (section, index) => {
                 if (section.type === 'registration_form') return '';
                 if (section.type === 'hero') {
-                    return `<section data-row="${index}" class="group cursor-pointer rounded-[28px] border border-slate-200 bg-slate-950 p-8 text-white shadow-sm transition hover:ring-2 hover:ring-blue-300">
-                        <div class="flex justify-between gap-4"><span class="rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase">Header</span>${rowActions(index)}</div>
-                        <h1 class="mt-8 max-w-3xl text-5xl font-black">${escapeHtml(section.title)}</h1>
-                        <p class="mt-5 max-w-2xl text-lg text-white/75">${text(section.content)}</p>
+                    return `<section data-row="${index}" data-editable-row class="${rowClasses(index)}">
+                        ${rowToolbar(index)}
+                        <div class="p-4">
+                            <div class="flex justify-end">${rowActions(index)}</div>
+                            ${titleBlock(section, index, 'text-xl font-black uppercase text-slate-950')}
+                            ${contentBlock(section, index, 'mt-2 leading-7 text-slate-500')}
+                        </div>
                     </section>`;
                 }
                 if (section.type === 'ticket_selection') {
-                    return `<section data-row="${index}" class="group cursor-pointer rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm transition hover:ring-2 hover:ring-blue-300">
-                        <div class="flex justify-between gap-4"><span class="rounded-full bg-slate-950 px-3 py-1 text-xs font-black uppercase text-white">Ticket & Form</span>${rowActions(index, true)}</div>
-                        <h2 class="mt-6 text-3xl font-black text-slate-950">${escapeHtml(section.title)}</h2>
-                        <p class="mt-2 text-slate-500">${text(section.content)}</p>
-                        <div class="mt-6 grid gap-4 lg:grid-cols-2">${ticketHtml()}</div>
-                        <div class="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                            <p class="text-sm font-black uppercase text-slate-500">Linked form preview</p>
-                            <div class="mt-4 max-w-2xl space-y-4">${formHtml()}</div>
+                    return `<section data-row="${index}" class="${rowClasses(index)}">
+                        <div class="flex items-start justify-between gap-4 p-4">
+                            <div class="flex-1 text-center">
+                                <h2 class="text-2xl font-black text-slate-950">${escapeHtml(section.title)}</h2>
+                                <p class="mt-2 text-sm text-slate-500">${escapeHtml(section.content)}</p>
+                            </div>
+                            ${rowActions(index, true)}
+                        </div>
+                        <div class="border-t border-slate-200 p-4">
+                            <div class="grid gap-4 lg:grid-cols-2">${ticketHtml()}</div>
+                            <div class="mt-4 rounded-[20px] border border-slate-200 bg-white p-4">
+                                <p class="text-sm font-black uppercase text-slate-500">Linked form preview</p>
+                                <div class="mt-4 max-w-2xl space-y-4">${formHtml()}</div>
+                            </div>
                         </div>
                     </section>`;
                 }
                 if (section.type === 'image') {
                     const image = section.settings?.image_url || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1400&q=80';
-                    return `<section data-row="${index}" class="group cursor-pointer rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition hover:ring-2 hover:ring-blue-300">
-                        <div class="mb-4 flex justify-between gap-4"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-500">Image</span>${rowActions(index)}</div>
-                        <img src="${escapeHtml(image)}" alt="${escapeHtml(section.title || 'Event image')}" class="aspect-[16/7] w-full rounded-[24px] object-cover">
-                        <h2 class="mt-5 text-2xl font-black text-slate-950">${escapeHtml(section.title || 'Image')}</h2>
+                    return `<section data-row="${index}" data-editable-row class="${rowClasses(index)}">
+                        ${rowToolbar(index)}
+                        <div class="p-3">
+                            <div class="flex justify-end">${rowActions(index)}</div>
+                            <div class="relative overflow-hidden">
+                                <img src="${escapeHtml(image)}" alt="${escapeHtml(section.title || 'Event image')}" class="aspect-[16/7] w-full object-cover">
+                                <div class="absolute bottom-0 left-0 p-5 text-4xl font-black uppercase text-white drop-shadow">${escapeHtml(section.title || 'Event Title')}</div>
+                            </div>
+                            ${isEditing(index) ? `
+                                ${titleBlock(section, index, 'mt-4 text-2xl font-black text-slate-950')}
+                                ${contentBlock(section, index, 'mt-3 leading-7 text-slate-600')}
+                                <label class="mt-4 block">
+                                    <span class="text-xs font-black uppercase text-slate-500">Image URL</span>
+                                    <input data-setting-image="${index}" value="${escapeHtml(section.settings?.image_url || '')}" class="ds-input mt-2" placeholder="https://...">
+                                </label>
+                            ` : ''}
+                        </div>
                     </section>`;
                 }
                 if (section.type === 'button_cta') {
-                    return `<section data-row="${index}" class="group cursor-pointer rounded-[28px] border border-blue-100 bg-blue-50 p-8 text-center shadow-sm transition hover:ring-2 hover:ring-blue-300">
-                        <div class="flex justify-between gap-4"><span class="rounded-full bg-blue-600 px-3 py-1 text-xs font-black uppercase text-white">CTA</span>${rowActions(index)}</div>
-                        <h2 class="mt-6 text-3xl font-black text-slate-950">${escapeHtml(section.title || 'Ready to register?')}</h2>
-                        <p class="mt-3 text-slate-600">${text(section.content || 'Select a ticket and complete the form on this page.')}</p>
-                        <a href="${escapeHtml(section.settings?.button_url || '#tickets')}" class="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white">${escapeHtml(section.settings?.button_label || 'View Tickets')}</a>
+                    return `<section data-row="${index}" data-editable-row class="${rowClasses(index)} text-center">
+                        ${rowToolbar(index)}
+                        <div class="p-4">
+                            <div class="flex justify-end">${rowActions(index)}</div>
+                            ${titleBlock(section, index, 'text-2xl font-black text-slate-950')}
+                            ${contentBlock(section, index, 'mt-3 text-slate-600', 'Select a ticket and complete the form on this page.')}
+                            <a href="${escapeHtml(section.settings?.button_url || '#tickets')}" class="mt-5 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white">${escapeHtml(section.settings?.button_label || 'View Tickets')}</a>
+                            ${isEditing(index) ? `
+                                <div class="mt-5 grid gap-3 text-left md:grid-cols-2">
+                                    <label>
+                                        <span class="text-xs font-black uppercase text-slate-500">Button Label</span>
+                                        <input data-setting-button-label="${index}" value="${escapeHtml(section.settings?.button_label || '')}" class="ds-input mt-2" placeholder="View Tickets">
+                                    </label>
+                                    <label>
+                                        <span class="text-xs font-black uppercase text-slate-500">Button Link</span>
+                                        <input data-setting-button-url="${index}" value="${escapeHtml(section.settings?.button_url || '')}" class="ds-input mt-2" placeholder="#tickets">
+                                    </label>
+                                </div>
+                            ` : ''}
+                        </div>
                     </section>`;
                 }
                 if (section.type === 'footer') {
-                    return `<footer data-row="${index}" class="group cursor-pointer rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm transition hover:ring-2 hover:ring-blue-300">
-                        <div class="flex justify-between gap-4"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-500">Footer</span>${rowActions(index, true)}</div>
-                        <h2 class="mt-5 text-2xl font-black text-slate-950">${escapeHtml(section.title)}</h2>
-                        <p class="mt-2 text-slate-500">${text(section.content)}</p>
+                    return `<footer data-row="${index}" data-editable-row class="${rowClasses(index)} text-center">
+                        ${rowToolbar(index)}
+                        <div class="p-4">
+                            <div class="flex justify-end">${rowActions(index, true)}</div>
+                            ${titleBlock(section, index, 'text-2xl font-black text-slate-950')}
+                            ${contentBlock(section, index, 'mt-2 text-slate-500')}
+                        </div>
                     </footer>`;
                 }
-                return `<section data-row="${index}" class="group cursor-pointer rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm transition hover:ring-2 hover:ring-blue-300">
-                    <div class="flex justify-between gap-4"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-500">${escapeHtml(section.type.replaceAll('_', ' '))}</span>${rowActions(index)}</div>
-                    <h2 class="mt-6 text-3xl font-black text-slate-950">${escapeHtml(section.title)}</h2>
-                    <p class="mt-4 leading-7 text-slate-600">${text(section.content)}</p>
+                return `<section data-row="${index}" data-editable-row class="${rowClasses(index)}">
+                    ${rowToolbar(index)}
+                    <div class="p-4">
+                        <div class="flex justify-end">${rowActions(index)}</div>
+                        ${titleBlock(section, index, 'text-xl font-black uppercase text-slate-950')}
+                        ${contentBlock(section, index, 'mt-2 leading-7 text-slate-500')}
+                    </div>
                 </section>`;
             };
 
-            const rowActions = (index, locked = false) => `
-                <div class="flex gap-2 opacity-0 transition group-hover:opacity-100">
+            const rowActions = (index, locked = false) => {
+                return `
+                <div class="flex flex-wrap gap-2">
                     <button type="button" data-move-up="${index}" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700">Up</button>
                     <button type="button" data-move-down="${index}" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700">Down</button>
                     ${locked ? '' : `<button type="button" data-remove="${index}" class="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-bold text-red-700">Remove</button>`}
                 </div>
-            `;
+            `};
 
             const sync = () => field.value = JSON.stringify(sections);
             const render = () => {
                 ensureCore();
-                canvas.innerHTML = `<div class="mx-auto max-w-6xl space-y-5">${sections.map(sectionMarkup).join('')}</div>`;
+                canvas.innerHTML = `<div class="mx-auto max-w-6xl">${sections.map(sectionMarkup).join('')}</div>`;
                 sync();
             };
 
@@ -286,21 +379,6 @@
                 const item = { type, title: type.replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase()), content: 'Double click to edit this section.', settings: {} };
                 sections.splice(footerIndex >= 0 ? footerIndex : sections.length, 0, item);
                 render();
-            };
-
-            const openEditor = (index) => {
-                const section = sections[index];
-                if (!section) return;
-                editingIndex = index;
-                panel.classList.remove('hidden');
-                root.querySelector('[data-editor-heading]').textContent = `Edit ${section.type === 'ticket_selection' ? 'Ticket & Form' : section.type.replaceAll('_', ' ')}`;
-                root.querySelector('[data-edit-title]').value = section.title || '';
-                root.querySelector('[data-edit-content]').value = section.content || '';
-                root.querySelector('[data-edit-image]').value = section.settings?.image_url || '';
-                root.querySelector('[data-edit-button-label]').value = section.settings?.button_label || '';
-                root.querySelector('[data-edit-button-url]').value = section.settings?.button_url || '';
-                root.querySelectorAll('[data-image-field]').forEach((item) => item.classList.toggle('hidden', section.type !== 'image' && section.type !== 'hero'));
-                root.querySelectorAll('[data-button-field]').forEach((item) => item.classList.toggle('hidden', section.type !== 'button_cta'));
             };
 
             root.addEventListener('click', (event) => {
@@ -313,41 +391,109 @@
                 }
                 const remove = event.target.closest('[data-remove]')?.dataset.remove;
                 if (remove !== undefined) {
+                    syncCanvas();
                     sections.splice(Number(remove), 1);
                     render();
                 }
                 const up = event.target.closest('[data-move-up]')?.dataset.moveUp;
                 if (up !== undefined && Number(up) > 0) {
+                    syncCanvas();
                     [sections[Number(up) - 1], sections[Number(up)]] = [sections[Number(up)], sections[Number(up) - 1]];
                     render();
                 }
                 const down = event.target.closest('[data-move-down]')?.dataset.moveDown;
                 if (down !== undefined && Number(down) < sections.length - 1) {
+                    syncCanvas();
                     [sections[Number(down) + 1], sections[Number(down)]] = [sections[Number(down)], sections[Number(down) + 1]];
                     render();
                 }
-                if (event.target.closest('[data-close-edit]') || event.target === panel) {
-                    panel.classList.add('hidden');
-                }
-                if (event.target.closest('[data-save-edit]') && editingIndex !== null) {
-                    const section = sections[editingIndex];
-                    section.title = root.querySelector('[data-edit-title]').value;
-                    section.content = root.querySelector('[data-edit-content]').value;
-                    section.settings = section.settings || {};
-                    section.settings.image_url = root.querySelector('[data-edit-image]').value;
-                    section.settings.button_label = root.querySelector('[data-edit-button-label]').value;
-                    section.settings.button_url = root.querySelector('[data-edit-button-url]').value;
-                    panel.classList.add('hidden');
+                const done = event.target.closest('[data-close-row-editor]')?.dataset.closeRowEditor;
+                if (done !== undefined) {
+                    syncCanvas();
+                    editingIndex = null;
+                    activeEditable = null;
                     render();
+                    return;
                 }
+
+                const toolbarButton = event.target.closest('[data-row-toolbar] button');
+                if (!toolbarButton) return;
+
+                const row = toolbarButton.closest('[data-row]');
+                const sourceEditor = row.querySelector('[data-html-source]');
+                const command = toolbarButton.closest('[data-wysiwyg-command]')?.dataset.wysiwygCommand;
+                const format = toolbarButton.closest('[data-wysiwyg-format]')?.dataset.wysiwygFormat;
+                if (command || format || toolbarButton.closest('[data-wysiwyg-link]') || toolbarButton.closest('[data-wysiwyg-image]')) {
+                    event.preventDefault();
+                    activeEditable?.focus();
+                }
+                if (!activeEditable) return;
+                if (command) document.execCommand(command, false);
+                if (format) document.execCommand('formatBlock', false, format);
+                if (toolbarButton.closest('[data-wysiwyg-link]')) {
+                    const url = window.prompt('Enter link URL');
+                    if (url) document.execCommand('createLink', false, url);
+                }
+                if (toolbarButton.closest('[data-wysiwyg-image]')) {
+                    const url = window.prompt('Enter image URL');
+                    if (url) document.execCommand('insertImage', false, url);
+                }
+                if (toolbarButton.closest('[data-wysiwyg-source]')) {
+                    sourceEditor.classList.toggle('hidden');
+                    sourceEditor.value = activeEditable.innerHTML;
+                    sourceEditor.focus();
+                }
+                activeEditable.innerHTML = sanitizeHtml(activeEditable.innerHTML);
+                syncRow(activeEditable.closest('[data-row]'));
+            });
+
+            root.addEventListener('focusin', (event) => {
+                const editable = event.target.closest('[data-editable-title], [data-editable-content]');
+                if (!editable) return;
+                activeEditable = editable;
+                const sourceEditor = editable.closest('[data-row]')?.querySelector('[data-html-source]');
+                if (sourceEditor) {
+                    sourceEditor.classList.add('hidden');
+                    sourceEditor.value = editable.innerHTML;
+                }
+            });
+
+            root.addEventListener('input', (event) => {
+                const editable = event.target.closest('[data-editable-title], [data-editable-content]');
+                const setting = event.target.closest('[data-setting-image], [data-setting-button-label], [data-setting-button-url]');
+                const sourceEditor = event.target.closest('[data-html-source]');
+                if (editable || setting) syncRow(event.target.closest('[data-row]'));
+                if (sourceEditor && activeEditable) {
+                    activeEditable.innerHTML = sanitizeHtml(sourceEditor.value);
+                    syncRow(activeEditable.closest('[data-row]'));
+                }
+            });
+
+            root.addEventListener('paste', (event) => {
+                if (!event.target.closest('[data-editable-title], [data-editable-content]')) return;
+                event.preventDefault();
+                const html = event.clipboardData?.getData('text/html');
+                const plain = event.clipboardData?.getData('text/plain') || '';
+                document.execCommand('insertHTML', false, sanitizeHtml(html || escapeHtml(plain).replace(/\n/g, '<br>')));
+                syncRow(event.target.closest('[data-row]'));
             });
 
             canvas.addEventListener('dblclick', (event) => {
-                const row = event.target.closest('[data-row]');
-                if (row) openEditor(Number(row.dataset.row));
+                const row = event.target.closest('[data-editable-row]');
+                if (!row) return;
+                const index = Number(row.dataset.row);
+                if (!isContentBlock(sections[index])) return;
+                syncCanvas();
+                editingIndex = index;
+                render();
+                window.setTimeout(() => {
+                    const content = canvas.querySelector(`[data-editable-content="${index}"]`);
+                    activeEditable = content;
+                    content?.focus();
+                }, 0);
             });
 
-            root.addEventListener('submit', sync);
+            root.addEventListener('submit', syncCanvas);
             render();
         })();
     </script>

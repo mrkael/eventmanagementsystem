@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'email', 'phone', 'website', 'address', 'description', 'logo_path', 'status', 'created_by', 'updated_by'])]
+#[Fillable(['user_id', 'name', 'email', 'phone', 'website', 'address', 'description', 'logo_path', 'status', 'created_by', 'updated_by'])]
 class OrganiserProfile extends Model
 {
     use HasFactory, SoftDeletes;
@@ -22,6 +22,11 @@ class OrganiserProfile extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function events(): HasMany

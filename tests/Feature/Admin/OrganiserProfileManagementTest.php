@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Mail\OrganiserLoginAccessMail;
 use App\Models\OrganiserProfile;
 use App\Models\User;
 use Database\Seeders\AccessControlSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class OrganiserProfileManagementTest extends TestCase
@@ -15,6 +17,7 @@ class OrganiserProfileManagementTest extends TestCase
     public function test_super_admin_can_manage_organiser_profile(): void
     {
         $this->seed(AccessControlSeeder::class);
+        Mail::fake();
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
 
         $this->actingAs($admin)->post(route('core.organisers.store'), [
@@ -28,9 +31,13 @@ class OrganiserProfileManagementTest extends TestCase
         ])->assertRedirect();
 
         $profile = OrganiserProfile::where('email', 'sender@acme.test')->firstOrFail();
+        $organiserUser = User::where('email', 'sender@acme.test')->firstOrFail();
 
         $this->assertSame($admin->id, $profile->created_by);
         $this->assertSame($admin->id, $profile->updated_by);
+        $this->assertSame($organiserUser->id, $profile->user_id);
+        $this->assertTrue($organiserUser->hasRole('organizer'));
+        Mail::assertSent(OrganiserLoginAccessMail::class);
         $this->assertDatabaseHas('audit_logs', ['action' => 'organisers.create']);
 
         $this->actingAs($admin)
@@ -85,5 +92,37 @@ class OrganiserProfileManagementTest extends TestCase
             'website' => 'not-a-url',
             'status' => 'archived',
         ])->assertSessionHasErrors(['name', 'email', 'website', 'status']);
+    }
+
+    public function test_super_admin_can_link_profile_to_existing_user_and_resend_login_access(): void
+    {
+        $this->seed(AccessControlSeeder::class);
+        Mail::fake();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $existingUser = User::create([
+            'name' => 'Existing Organiser User',
+            'email' => 'existing-organiser@example.test',
+            'password' => 'password',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)->post(route('core.organisers.store'), [
+            'name' => 'Existing Organiser',
+            'email' => 'existing-organiser@example.test',
+            'status' => 'active',
+        ])->assertRedirect();
+
+        $profile = OrganiserProfile::where('email', 'existing-organiser@example.test')->firstOrFail();
+
+        $this->assertSame($existingUser->id, $profile->user_id);
+        $this->assertTrue($existingUser->fresh()->hasRole('organizer'));
+
+        $this->actingAs($admin)
+            ->post(route('core.organisers.resend-login', $profile))
+            ->assertRedirect();
+
+        Mail::assertSent(OrganiserLoginAccessMail::class, 2);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'organisers.login_access.resend']);
     }
 }

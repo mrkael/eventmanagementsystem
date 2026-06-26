@@ -4,18 +4,28 @@ namespace App\Services\Core;
 
 use App\Models\OrganiserProfile;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class OrganiserProfileService
 {
+    public array $lastLoginAccessResult = ['sent' => false, 'message' => 'Login access email was not sent.'];
+
+    public function __construct(private OrganiserLoginAccessService $loginAccessService) {}
+
     public function create(array $data, int $userId): OrganiserProfile
     {
-        $data['created_by'] = $userId;
-        $data['updated_by'] = $userId;
-        $data['logo_path'] = $this->storeLogo($data['logo'] ?? null);
-        unset($data['logo']);
+        return DB::transaction(function () use ($data, $userId) {
+            $data['created_by'] = $userId;
+            $data['updated_by'] = $userId;
+            $data['logo_path'] = $this->storeLogo($data['logo'] ?? null);
+            unset($data['logo']);
 
-        return OrganiserProfile::create($data);
+            $profile = OrganiserProfile::create($data);
+            $this->lastLoginAccessResult = $this->loginAccessService->ensureAccess($profile);
+
+            return $profile->fresh(['user', 'creator', 'updater']);
+        });
     }
 
     public function update(OrganiserProfile $organiser, array $data, int $userId): OrganiserProfile
@@ -31,8 +41,14 @@ class OrganiserProfileService
 
         unset($data['logo']);
         $organiser->update($data);
+        if ($organiser->user) {
+            $organiser->user->forceFill([
+                'name' => $organiser->user->name ?: $organiser->name,
+                'email' => $organiser->email,
+            ])->save();
+        }
 
-        return $organiser->fresh(['creator', 'updater']);
+        return $organiser->fresh(['user', 'creator', 'updater']);
     }
 
     public function delete(OrganiserProfile $organiser): void

@@ -16,6 +16,8 @@ class PublicRegistrationRequest extends FormRequest
         return [
             'participants' => ['nullable', 'array'],
             'participants.*' => ['array'],
+            'selected_ticket_id' => ['nullable', 'integer'],
+            'ticket_quantity' => ['nullable', 'integer', 'min:1'],
             'full_name' => ['required_without:participants', 'string', 'max:255'],
             'email' => ['required_without:participants', 'email:rfc', 'max:255'],
             'phone' => ['nullable', 'string', 'max:60'],

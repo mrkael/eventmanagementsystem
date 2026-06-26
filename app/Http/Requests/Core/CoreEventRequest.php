@@ -9,9 +9,28 @@ class CoreEventRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        $event = $this->route('event');
+
+        if ($event && ! $this->user()?->ownsEvent($event)) {
+            return false;
+        }
+
+        if (! $this->user()?->isPlatformAdmin() && ! $this->user()?->organiserProfile) {
+            return false;
+        }
+
         return $this->isMethod('post')
             ? ($this->user()?->hasPermission('events.create') ?? false)
             : ($this->user()?->hasPermission('events.update') ?? false);
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->user() && ! $this->user()->isPlatformAdmin()) {
+            $this->merge([
+                'organiser_profile_id' => $this->user()->organiserProfile?->id,
+            ]);
+        }
     }
 
     public function rules(): array
@@ -20,7 +39,7 @@ class CoreEventRequest extends FormRequest
 
         return [
             'title' => ['required', 'string', 'max:255'],
-            'organiser_profile_id' => ['required', 'integer', 'exists:organiser_profiles,id'],
+            'organiser_profile_id' => ['required', 'integer', Rule::exists('organiser_profiles', 'id')->where('status', 'active')],
             'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('events', 'slug')->ignore($eventId)],
             'custom_url' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('events', 'custom_url')->ignore($eventId)],
             'description' => ['nullable', 'string'],

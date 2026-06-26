@@ -15,12 +15,14 @@
                 <x-ui.icon name="search" class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 <input name="search" value="{{ request('search') }}" class="ds-input pl-11" placeholder="Search by event name">
             </label>
-            <select name="organiser_profile_id" class="ds-input xl:w-64">
-                <option value="">All organisers</option>
-                @foreach($organiserProfiles as $profile)
-                    <option value="{{ $profile->id }}" @selected((string) request('organiser_profile_id') === (string) $profile->id)>{{ $profile->name }}</option>
-                @endforeach
-            </select>
+            @if($isPlatformAdmin ?? false)
+                <select name="organiser_profile_id" class="ds-input xl:w-64">
+                    <option value="">All organisers</option>
+                    @foreach($organiserProfiles as $profile)
+                        <option value="{{ $profile->id }}" @selected((string) request('organiser_profile_id') === (string) $profile->id)>{{ $profile->name }}</option>
+                    @endforeach
+                </select>
+            @endif
             <select name="status" class="ds-input xl:w-44">
                 <option value="">All statuses</option>
                 @foreach($statuses as $status)

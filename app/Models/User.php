@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -47,17 +48,48 @@ class User extends Authenticatable
 
     public function hasRole(string $roleKey): bool
     {
+        $this->loadMissing('roles');
+
         return $this->roles->contains('key', $roleKey);
     }
 
     public function hasAnyRole(array $roleKeys): bool
     {
+        $this->loadMissing('roles');
+
         return $this->roles->pluck('key')->intersect($roleKeys)->isNotEmpty();
     }
 
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('super-admin');
+    }
+
+    public function isPlatformAdmin(): bool
+    {
+        return $this->hasAnyRole(['super-admin', 'admin']);
+    }
+
+    public function isOrganiser(): bool
+    {
+        return $this->hasRole('organizer');
+    }
+
+    public function organiserProfile(): HasOne
+    {
+        return $this->hasOne(OrganiserProfile::class);
+    }
+
+    public function ownsEvent(Event $event): bool
+    {
+        if ($this->isPlatformAdmin()) {
+            return true;
+        }
+
+        $this->loadMissing('organiserProfile');
+
+        return $this->organiserProfile
+            && (int) $event->organiser_profile_id === (int) $this->organiserProfile->id;
     }
 
     public function hasPermission(string $permissionKey): bool
