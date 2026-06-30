@@ -9,15 +9,20 @@ use App\Models\EventEmailTemplate;
 use App\Models\Registration;
 use App\Models\Ticket;
 use App\Services\Attendance\QrCodeImageService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Throwable;
+
 
 class EventConfirmationEmailService
 {
     public const TYPE = 'confirmation';
 
-    public function __construct(private QrCodeImageService $qrCodeImageService) {}
+    public function __construct(
+        private QrCodeImageService $qrCodeImageService,
+        private ETicketPdfService $eTicketPdfService,
+    ) {}
 
     public function templateFor(Event $event): EventEmailTemplate
     {
@@ -99,8 +104,8 @@ class EventConfirmationEmailService
     {
         $template = $this->templateFor($event);
         $rendered = $this->preview($event, $template);
-        $recipient = $this->testRecipient();
-        $sender = $this->senderEmail($event);
+        $recipient = config('mail.from.address');
+        $sender = config('mail.from.address');
 
         return $this->sendRendered($event, null, 'confirmation_test', $recipient, null, $sender, $rendered, 'SAMPLE-QR-CODE');
     }
@@ -124,10 +129,18 @@ class EventConfirmationEmailService
         }
 
         $rendered = $this->render($event, $template, $registration, $ticket, $quantity, $this->answerValues($registration), $qrData);
-        $recipient = $this->registrationRecipient($registration);
-        $sender = $this->senderEmail($event);
+        $recipient = $registration->email;
+        $sender = config('mail.from.address');
 
-        $log = $this->sendRendered($event, $registration, 'confirmation', $recipient, $registration->email, $sender, $rendered, $rawToken);
+        $pdfData = null;
+        try {
+            $pdfData = $this->eTicketPdfService->generate($registration, $rawToken);
+        } catch (Throwable) {
+        }
+
+        $pdfFilename = 'eticket-' . Str::slug($registration->reference_number) . '.pdf';
+
+        $log = $this->sendRendered($event, $registration, 'confirmation', $recipient, $registration->email, $sender, $rendered, $rawToken, $pdfData, $pdfFilename);
 
         if ($log->status === 'sent') {
             $registration->update(['confirmation_email_sent_at' => $log->sent_at]);
@@ -166,7 +179,7 @@ class EventConfirmationEmailService
         ];
     }
 
-    private function sendRendered(Event $event, ?Registration $registration, string $type, string $recipient, ?string $originalEmail, ?string $sender, array $rendered, string $token): EmailLog
+    private function sendRendered(Event $event, ?Registration $registration, string $type, string $recipient, ?string $originalEmail, ?string $sender, array $rendered, string $token, ?string $pdfData = null, ?string $pdfFilename = null): EmailLog
     {
         $log = EmailLog::create([
             'event_id' => $event->id,
@@ -179,45 +192,65 @@ class EventConfirmationEmailService
             'status' => 'pending',
         ]);
 
-        try {
-            Mail::to($recipient)->send(new CoreRegistrationConfirmationMail(
-                registration: $registration,
-                ticketToken: $token,
-                ticketQr: $rendered['qr'],
-                renderedBody: $rendered['body'],
-                renderedSubject: $rendered['subject'],
-                renderedHeader: $rendered['header'],
-                renderedFooter: $rendered['footer'],
-                senderEmail: $sender,
-                senderName: $event->organiserProfile?->name,
-            ));
+        $lastException = null;
 
-            $log->update(['status' => 'sent', 'sent_at' => now()]);
-        } catch (Throwable $exception) {
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            if ($attempt > 0) {
+                sleep(2);
+            }
+
+            try {
+                Mail::to($recipient)->send(new CoreRegistrationConfirmationMail(
+                    registration: $registration,
+                    ticketToken: $token,
+                    ticketQr: $rendered['qr'],
+                    renderedBody: $rendered['body'],
+                    renderedSubject: $rendered['subject'],
+                    renderedHeader: $rendered['header'],
+                    renderedFooter: $rendered['footer'],
+                    senderEmail: $sender,
+                    senderName: $event->organiserProfile?->name,
+                    pdfData: $pdfData,
+                    pdfFilename: $pdfFilename,
+                ));
+
+                $log->update(['status' => 'sent', 'sent_at' => now()]);
+                Log::info('Confirmation email sent', [
+                    'log_id' => $log->id,
+                    'recipient' => $recipient,
+                    'type' => $type,
+                    'event_id' => $event->id,
+                    'registration_id' => $registration?->id,
+                ]);
+                $lastException = null;
+                break;
+            } catch (Throwable $exception) {
+                Log::warning('Confirmation email attempt failed', [
+                    'log_id' => $log->id,
+                    'attempt' => $attempt + 1,
+                    'recipient' => $recipient,
+                    'error' => $exception->getMessage(),
+                ]);
+                $lastException = $exception;
+            }
+        }
+
+        if ($lastException) {
             $log->update([
                 'status' => 'failed',
-                'error_message' => Str::limit($exception->getMessage(), 2000, ''),
+                'error_message' => Str::limit($lastException->getMessage(), 2000, ''),
+            ]);
+            Log::error('Confirmation email failed after all attempts', [
+                'log_id' => $log->id,
+                'recipient' => $recipient,
+                'type' => $type,
+                'event_id' => $event->id,
+                'registration_id' => $registration?->id,
+                'error' => $lastException->getMessage(),
             ]);
         }
 
         return $log->fresh();
-    }
-
-    private function senderEmail(Event $event): ?string
-    {
-        return $event->organiserProfile?->email ?: config('mail.from.address');
-    }
-
-    private function registrationRecipient(Registration $registration): string
-    {
-        return config('event_management.confirmation_email_test_mode')
-            ? $this->testRecipient()
-            : $registration->email;
-    }
-
-    private function testRecipient(): string
-    {
-        return config('event_management.confirmation_email_test_recipient');
     }
 
     private function renderContent(string $content, array $values): string

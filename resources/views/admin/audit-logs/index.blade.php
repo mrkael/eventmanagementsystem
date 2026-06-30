@@ -11,7 +11,7 @@
                 </select>
                 <input type="date" name="date_from" value="{{ request('date_from') }}" class="min-h-11 rounded-lg border border-slate-300 px-3 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20" aria-label="Date from">
                 <input type="date" name="date_to" value="{{ request('date_to') }}" class="min-h-11 rounded-lg border border-slate-300 px-3 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20" aria-label="Date to">
-                <button class="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50">Filter</button>
+                <button class="btn btn-outline-primary btn-md">Filter</button>
             </form>
         </div>
 

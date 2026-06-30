@@ -6,9 +6,9 @@
                 <select name="status" class="min-h-11 rounded-lg border border-slate-300 px-3 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">
                     <option value="">All statuses</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
                 </select>
-                <button class="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50">Filter</button>
+                <button class="min-h-11 btn btn-outline-primary btn-md">Filter</button>
             </form>
-            <a href="{{ route('admin.event-categories.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">New category</a>
+            <a href="{{ route('admin.event-categories.create') }}" class="btn btn-primary btn-md">New category</a>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -20,7 +20,7 @@
                             <td class="px-5 py-4 font-mono text-xs">{{ $category->slug }}</td>
                             <td class="px-5 py-4">{{ $category->sort_order }}</td>
                             <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $category->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">{{ $category->is_active ? 'Active' : 'Inactive' }}</span></td>
-                            <td class="px-5 py-4"><div class="flex justify-end gap-2"><a href="{{ route('admin.event-categories.edit', $category) }}" class="rounded-lg border border-slate-300 px-3 py-2 font-semibold hover:bg-slate-50">Edit</a><form method="POST" action="{{ route('admin.event-categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">@csrf @method('DELETE')<button class="rounded-lg border border-red-200 px-3 py-2 font-semibold text-red-700 hover:bg-red-50">Delete</button></form></div></td>
+                            <td class="px-5 py-4"><div class="flex justify-end gap-2"><a href="{{ route('admin.event-categories.edit', $category) }}" class="btn btn-outline-primary btn-sm">Edit</a><form method="POST" action="{{ route('admin.event-categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">@csrf @method('DELETE')<button class="btn btn-outline-danger btn-sm">Delete</button></form></div></td>
                         </tr>
                     @empty
                         <tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">No categories found.</td></tr>

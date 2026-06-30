@@ -11,83 +11,146 @@
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-5 focus:top-5 focus:z-50 focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-slate-950 focus:shadow-lg">Skip to main content</a>
 
     @php
-        $navItems = [
-            ['label' => 'Dashboard', 'route' => 'dashboard', 'permission' => 'dashboard.view', 'icon' => 'dashboard'],
-            ['label' => 'Organiser Profile', 'route' => 'core.organisers.index', 'permission' => 'organisers.view', 'icon' => 'building'],
-            ['label' => 'Events', 'route' => 'core.events.index', 'permission' => 'events.view', 'icon' => 'calendar'],
-            ['label' => 'Attendees Management', 'route' => 'core.attendees.index', 'permission' => 'registrations.view', 'icon' => 'users'],
-            ['label' => 'Emails', 'route' => 'core.emails.index', 'permission' => 'emails.view', 'icon' => 'mail'],
+        $navGroups = [
+            [
+                'label' => null,
+                'items' => [
+                    ['label' => 'Dashboard', 'route' => 'dashboard', 'permission' => 'dashboard.view', 'icon' => 'dashboard'],
+                ],
+            ],
+            [
+                'label' => 'Management',
+                'items' => [
+                    ['label' => 'Organiser Profile', 'route' => 'core.organisers.index', 'permission' => 'organisers.view', 'icon' => 'building'],
+                    ['label' => 'Events',             'route' => 'core.events.index',      'permission' => 'events.view',        'icon' => 'calendar'],
+                    ['label' => 'Attendees',          'route' => 'core.attendees.index',   'permission' => 'registrations.view', 'icon' => 'users'],
+                    ['label' => 'Emails',             'route' => 'core.emails.index',      'permission' => 'emails.view',        'icon' => 'mail'],
+                ],
+            ],
         ];
     @endphp
 
-    <div id="admin-shell" class="min-h-screen p-3 lg:grid lg:grid-cols-[18rem_1fr] lg:gap-4 lg:p-4">
-        <div data-sidebar-overlay class="fixed inset-0 z-30 hidden bg-slate-950/40 backdrop-blur-sm lg:hidden"></div>
+    <div data-sidebar-overlay class="fixed inset-0 z-30 hidden bg-slate-950/40 backdrop-blur-sm lg:hidden"></div>
 
-        <aside data-sidebar class="ds-glass fixed inset-y-3 left-3 z-40 flex w-[18rem] -translate-x-[calc(100%+1rem)] flex-col rounded-[28px] transition-transform duration-300 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:translate-x-0">
-            <div class="p-4">
-                <div class="flex items-center gap-3 rounded-[22px] bg-slate-950 p-3 text-white shadow-soft">
-                    <div class="grid size-11 place-items-center rounded-2xl bg-white/12 text-sm font-black">EM</div>
+    <div class="flex min-h-screen">
+
+        {{-- ── Sidebar ────────────────────────────────────────────── --}}
+        <aside
+            data-sidebar
+            class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 -translate-x-full flex-col border-r border-slate-200/80 bg-white shadow-[1px_0_0_0_rgb(0,0,0,0.04)] transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
+        >
+            {{-- Brand --}}
+            <div class="shrink-0 px-4 pb-4 pt-5">
+                <div class="flex items-center gap-3 rounded-2xl bg-[#002169] px-4 py-3">
+                    <div class="grid size-9 shrink-0 place-items-center rounded-xl bg-white/15 text-xs font-black text-white">EM</div>
                     <div class="min-w-0">
-                        <p class="text-sm font-bold">EventOS</p>
-                        <p class="text-xs text-white/58">Premium workspace</p>
+                        <p class="text-sm font-bold leading-none text-white">EventOS</p>
+                        <p class="mt-1 text-[11px] font-medium text-white/55">Premium workspace</p>
                     </div>
                 </div>
             </div>
 
-            <nav class="flex-1 space-y-1 px-3">
-                @foreach ($navItems as $item)
-                    @if (auth()->user()->hasPermission($item['permission']))
-                        @php($active = request()->routeIs($item['route']) || request()->routeIs(\Illuminate\Support\Str::beforeLast($item['route'], '.') . '.*'))
-                        <a href="{{ route($item['route']) }}" class="group flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-bold transition duration-200 {{ $active ? 'bg-slate-950 text-white shadow-soft' : 'text-slate-600 hover:bg-white hover:text-slate-950 hover:shadow-sm' }}">
-                            <x-ui.icon :name="$item['icon']" class="size-5 shrink-0" />
-                            <span>{{ $item['label'] }}</span>
-                        </a>
+            {{-- Navigation --}}
+            <nav class="flex-1 overflow-y-auto px-3 py-1">
+                @foreach ($navGroups as $group)
+                    @if ($group['label'])
+                        <div class="px-2 pb-1.5 pt-5">
+                            <p class="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{{ $group['label'] }}</p>
+                        </div>
                     @endif
+
+                    <ul class="space-y-0.5">
+                        @foreach ($group['items'] as $item)
+                            @if (auth()->user()->hasPermission($item['permission']))
+                                @php($active = request()->routeIs($item['route']) || request()->routeIs(\Illuminate\Support\Str::beforeLast($item['route'], '.') . '.*'))
+                                <li>
+                                    <a
+                                        href="{{ route($item['route']) }}"
+                                        class="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 {{ $active ? 'bg-[#002169]/[.07] font-semibold text-[#002169]' : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}"
+                                        @if($active) aria-current="page" @endif
+                                    >
+                                        @if ($active)
+                                            <span class="absolute inset-y-2 left-0 w-[3px] rounded-full bg-[#002169]" aria-hidden="true"></span>
+                                        @endif
+                                        <x-ui.icon
+                                            :name="$item['icon']"
+                                            class="size-5 shrink-0 transition-colors duration-200 {{ $active ? 'text-[#002169]' : 'text-slate-400 group-hover:text-slate-600' }}"
+                                        />
+                                        <span>{{ $item['label'] }}</span>
+                                    </a>
+                                </li>
+                            @endif
+                        @endforeach
+                    </ul>
                 @endforeach
             </nav>
 
-            <div class="p-4">
-                <div class="rounded-[22px] border border-slate-200/80 bg-white/70 p-3">
-                    <p class="truncate text-sm font-bold">{{ auth()->user()->name }}</p>
-                    <p class="truncate text-xs text-slate-500">{{ auth()->user()->email }}</p>
-                    <form method="POST" action="{{ route('logout') }}" class="mt-3">
+            {{-- Footer: user profile --}}
+            <div class="shrink-0 px-3 pb-5">
+                <div class="mb-3 h-px bg-slate-200/80"></div>
+                <div class="flex items-center gap-3 rounded-xl px-2 py-2">
+                    <div class="grid size-8 shrink-0 place-items-center rounded-full bg-[#002169] text-[11px] font-bold text-white">
+                        {{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-semibold text-slate-900">{{ auth()->user()->name }}</p>
+                        <p class="truncate text-[11px] text-slate-500">{{ auth()->user()->email }}</p>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="ds-button-secondary w-full">Sign out</button>
+                        <button
+                            type="submit"
+                            class="grid size-8 place-items-center rounded-lg text-slate-400 transition-colors duration-150 hover:bg-red-50 hover:text-red-600"
+                            aria-label="Sign out"
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                <polyline points="16 17 21 12 16 7"/>
+                                <line x1="21" y1="12" x2="9" y2="12"/>
+                            </svg>
+                        </button>
                     </form>
                 </div>
             </div>
         </aside>
 
-        <div class="min-w-0">
-            <header class="sticky top-3 z-20 mb-4 rounded-[28px] border border-white/70 bg-white/78 px-4 py-3 shadow-soft backdrop-blur-2xl lg:top-4">
-                <div class="flex items-center gap-3">
-                    <button type="button" data-sidebar-open class="grid size-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 lg:hidden" aria-label="Open sidebar">
-                        <span class="h-0.5 w-5 rounded bg-current shadow-[0_6px_0_current,0_-6px_0_current]"></span>
+        {{-- ── Main content ────────────────────────────────────────── --}}
+        <div class="flex min-w-0 flex-1 flex-col">
+
+            <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/95 px-6 py-3.5 backdrop-blur-md">
+                <div class="flex items-center gap-4">
+                    <button
+                        type="button"
+                        data-sidebar-open
+                        class="grid size-9 place-items-center rounded-lg border border-slate-200 text-slate-600 transition-colors duration-150 hover:bg-slate-100 lg:hidden"
+                        aria-label="Open sidebar"
+                    >
+                        <span class="h-0.5 w-4 rounded bg-current shadow-[0_5px_0_currentColor,0_-5px_0_currentColor]"></span>
                     </button>
                     <div class="min-w-0 flex-1">
-                        <p class="text-xs font-bold uppercase text-blue-600">{{ $eyebrow ?? 'Workspace' }}</p>
+                        <p class="text-[11px] font-semibold uppercase tracking-widest text-[#002169]/70">{{ $eyebrow ?? 'Workspace' }}</p>
                         <h1 class="truncate text-lg font-bold text-slate-950">{{ $heading ?? $title ?? 'Dashboard' }}</h1>
                     </div>
-                    <div class="hidden min-h-11 items-center rounded-full border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 md:flex">
-                        <x-ui.icon name="search" class="mr-2 size-4" />
-                        Search foundation
-                        <span class="ml-3 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-bold">Ctrl K</span>
+                    <div class="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400 md:flex">
+                        <x-ui.icon name="search" class="size-4 shrink-0" />
+                        <span>Search</span>
+                        <span class="ml-2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-500">Ctrl K</span>
                     </div>
                 </div>
             </header>
 
-            <main id="main-content" class="ds-page-enter px-1 pb-8 lg:px-2">
+            <main id="main-content" class="ds-page-enter flex-1 px-4 py-5 lg:px-6 lg:py-6">
                 @if (session('status'))
-                    <div role="status" aria-live="polite" class="mb-5 rounded-[20px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">{{ session('status') }}</div>
+                    <div role="status" aria-live="polite" class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{{ session('status') }}</div>
                 @endif
 
                 @if (session('warning'))
-                    <div role="status" aria-live="polite" class="mb-5 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">{{ session('warning') }}</div>
+                    <div role="status" aria-live="polite" class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{{ session('warning') }}</div>
                 @endif
 
                 @if ($errors->any())
-                    <div role="alert" class="mb-5 rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                        <p class="font-bold">Please review the highlighted issues.</p>
+                    <div role="alert" class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        <p class="font-semibold">Please review the highlighted issues.</p>
                     </div>
                 @endif
 
@@ -102,11 +165,11 @@
             const overlay = document.querySelector('[data-sidebar-overlay]');
             const openButton = document.querySelector('[data-sidebar-open]');
             const openSidebar = () => {
-                sidebar.classList.remove('-translate-x-[calc(100%+1rem)]');
+                sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
             };
             const closeSidebar = () => {
-                sidebar.classList.add('-translate-x-[calc(100%+1rem)]');
+                sidebar.classList.add('-translate-x-full');
                 overlay.classList.add('hidden');
             };
             openButton?.addEventListener('click', openSidebar);

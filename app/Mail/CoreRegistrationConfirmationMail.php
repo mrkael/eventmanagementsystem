@@ -6,6 +6,7 @@ use App\Models\Registration;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -24,6 +25,8 @@ class CoreRegistrationConfirmationMail extends Mailable
         public string $renderedFooter = '',
         public ?string $senderEmail = null,
         public ?string $senderName = null,
+        public ?string $pdfData = null,
+        public ?string $pdfFilename = null,
     ) {}
 
     public function envelope(): Envelope
@@ -37,5 +40,17 @@ class CoreRegistrationConfirmationMail extends Mailable
     public function content(): Content
     {
         return new Content(view: 'emails.core.confirmation');
+    }
+
+    public function attachments(): array
+    {
+        if (! $this->pdfData) {
+            return [];
+        }
+
+        return [
+            Attachment::fromData(fn () => $this->pdfData, $this->pdfFilename ?? 'eticket.pdf')
+                ->withMime('application/pdf'),
+        ];
     }
 }

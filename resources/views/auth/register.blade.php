@@ -36,7 +36,7 @@
                     <label for="password_confirmation" class="block text-sm font-medium text-slate-700">Confirm password</label>
                     <input id="password_confirmation" name="password_confirmation" type="password" required class="mt-2 block min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">
                 </div>
-                <button type="submit" class="min-h-11 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2">Create account</button>
+                <button type="submit" class="btn btn-primary btn-md w-full">Create account</button>
             </form>
 
             <p class="mt-6 text-center text-sm text-slate-600">

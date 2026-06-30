@@ -66,12 +66,12 @@
                 </label>
                 <div class="grid grid-cols-2 gap-3">
                     <label class="block">
-                        <span class="text-xs font-black uppercase text-slate-500">Width (px)</span>
-                        <input id="img-setting-width" type="number" min="1" class="ds-input mt-1" placeholder="auto">
+                        <span class="text-xs font-black uppercase text-slate-500">Width</span>
+                        <input id="img-setting-width" type="text" class="ds-input mt-1" placeholder="e.g. 100% or 500px">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-black uppercase text-slate-500">Height (px)</span>
-                        <input id="img-setting-height" type="number" min="1" class="ds-input mt-1" placeholder="auto">
+                        <span class="text-xs font-black uppercase text-slate-500">Height</span>
+                        <input id="img-setting-height" type="text" class="ds-input mt-1" placeholder="e.g. auto or 300px">
                     </label>
                 </div>
                 <label class="block">
@@ -226,7 +226,7 @@
                 template.innerHTML = String(value ?? '');
                 const allowedTags = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'H1', 'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'A', 'IMG', 'DIV', 'SPAN', 'BLOCKQUOTE', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD', 'CAPTION', 'COLGROUP', 'COL']);
                 const allowedAttrs = new Set(['href', 'src', 'alt', 'title', 'target', 'rel', 'class', 'style', 'width', 'height', 'colspan', 'rowspan', 'scope', 'border', 'cellpadding', 'cellspacing']);
-                const safeStyleProps = { 'text-align': /^(left|center|right|justify)$/, 'float': /^(left|right|none)$/, 'display': /^(block|table|table-cell|table-row|inline-block)$/, 'margin-left': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'margin-right': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'margin-top': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'margin-bottom': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding': /^(\d+(\.\d+)?(px|em|rem|%) ?){1,4}$/, 'padding-top': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-right': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-bottom': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-left': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'border-collapse': /^(collapse|separate)$/, 'border-spacing': /^(\d+(\.\d+)?(px|em|rem) ?){1,2}$/, 'width': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'min-width': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'max-width': /^(auto|none|\d+(\.\d+)?(px|em|rem|%))$/, 'background-color': /^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i, 'color': /^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i, 'font-weight': /^(normal|bold|bolder|lighter|\d{3})$/, 'font-size': /^(\d+(\.\d+)?(px|em|rem|pt|%))$/, 'vertical-align': /^(top|middle|bottom|baseline)$/ };
+                const safeStyleProps = { 'text-align': /^(left|center|right|justify)$/, 'float': /^(left|right|none)$/, 'display': /^(block|table|table-cell|table-row|inline-block)$/, 'margin-left': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'margin-right': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'margin-top': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'margin-bottom': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding': /^(\d+(\.\d+)?(px|em|rem|%) ?){1,4}$/, 'padding-top': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-right': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-bottom': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'padding-left': /^(\d+(\.\d+)?(px|em|rem|%))$/, 'border-collapse': /^(collapse|separate)$/, 'border-spacing': /^(\d+(\.\d+)?(px|em|rem) ?){1,2}$/, 'width': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'height': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'min-width': /^(auto|\d+(\.\d+)?(px|em|rem|%))$/, 'max-width': /^(auto|none|\d+(\.\d+)?(px|em|rem|%))$/, 'background-color': /^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i, 'color': /^(#[0-9a-f]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-z]+)$/i, 'font-weight': /^(normal|bold|bolder|lighter|\d{3})$/, 'font-size': /^(\d+(\.\d+)?(px|em|rem|pt|%))$/, 'vertical-align': /^(top|middle|bottom|baseline)$/ };
                 const sanitizeStyle = (value) => {
                     const safe = value.split(';').map(s => s.trim()).filter(Boolean).filter(part => {
                         const colon = part.indexOf(':');
@@ -740,13 +740,18 @@
             const openImgSettings = (img) => {
                 settingsTargetImg = img;
                 document.getElementById('img-setting-alt').value = img.getAttribute('alt') || '';
-                document.getElementById('img-setting-width').value = img.getAttribute('width') || '';
-                document.getElementById('img-setting-height').value = img.getAttribute('height') || '';
-                const style = img.getAttribute('style') || '';
+                const styleAttr = img.getAttribute('style') || '';
+                const readStyleProp = (prop) => { const m = styleAttr.match(new RegExp(prop + '\\s*:\\s*([^;]+)', 'i')); return m ? m[1].trim() : ''; };
+                const styleW = readStyleProp('width');
+                const styleH = readStyleProp('height');
+                const attrW = img.getAttribute('width');
+                const attrH = img.getAttribute('height');
+                document.getElementById('img-setting-width').value = styleW || (attrW ? attrW + 'px' : '');
+                document.getElementById('img-setting-height').value = styleH || (attrH ? attrH + 'px' : '');
                 let align = '';
-                if (/float\s*:\s*left/i.test(style)) align = 'left';
-                else if (/float\s*:\s*right/i.test(style)) align = 'right';
-                else if (/margin-left\s*:\s*auto/i.test(style) || /display\s*:\s*block/i.test(style)) align = 'center';
+                if (/float\s*:\s*left/i.test(styleAttr)) align = 'left';
+                else if (/float\s*:\s*right/i.test(styleAttr)) align = 'right';
+                else if (/margin-left\s*:\s*auto/i.test(styleAttr) || /display\s*:\s*block/i.test(styleAttr)) align = 'center';
                 document.getElementById('img-setting-align').value = align;
                 const parent = img.parentElement;
                 document.getElementById('img-setting-link').value = (parent?.tagName === 'A') ? (parent.getAttribute('href') || '') : '';
@@ -766,16 +771,26 @@
                 if (!settingsTargetImg) return;
                 const img = settingsTargetImg;
                 const alt = document.getElementById('img-setting-alt').value.trim();
-                const width = document.getElementById('img-setting-width').value.trim();
-                const height = document.getElementById('img-setting-height').value.trim();
                 const align = document.getElementById('img-setting-align').value;
                 const linkUrl = document.getElementById('img-setting-link').value.trim();
 
+                const normalizeSize = (val) => {
+                    val = val.trim();
+                    if (!val || val === 'auto') return val === 'auto' ? 'auto' : '';
+                    if (/^\d+(\.\d+)?$/.test(val)) return val + 'px';
+                    if (/^\d+(\.\d+)?(px|em|rem|%)$/i.test(val)) return val.toLowerCase();
+                    return '';
+                };
+                const width = normalizeSize(document.getElementById('img-setting-width').value);
+                const height = normalizeSize(document.getElementById('img-setting-height').value);
+
                 alt ? img.setAttribute('alt', alt) : img.removeAttribute('alt');
-                width ? img.setAttribute('width', width) : img.removeAttribute('width');
-                height ? img.setAttribute('height', height) : img.removeAttribute('height');
+                img.removeAttribute('width');
+                img.removeAttribute('height');
 
                 const styleParts = [];
+                if (width) styleParts.push(`width: ${width};`);
+                if (height) styleParts.push(`height: ${height};`);
                 if (align === 'left') { styleParts.push('float: left;', 'margin-right: 1em;'); }
                 else if (align === 'right') { styleParts.push('float: right;', 'margin-left: 1em;'); }
                 else if (align === 'center') { styleParts.push('display: block;', 'margin-left: auto;', 'margin-right: auto;'); }

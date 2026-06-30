@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('MAIL_MAILER', env('MAIL_DRIVER', 'log')),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,7 +39,13 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            'scheme' => (static function () {
+                $v = env('MAIL_SCHEME', env('MAIL_ENCRYPTION'));
+                if ($v === null || strtolower((string) $v) === 'null') return null;
+                if (in_array(strtolower((string) $v), ['tls', 'starttls'])) return null;
+                if (strtolower((string) $v) === 'ssl') return 'smtps';
+                return $v;
+            })(),
             'url' => env('MAIL_URL'),
             'host' => env('MAIL_HOST', '127.0.0.1'),
             'port' => env('MAIL_PORT', 2525),

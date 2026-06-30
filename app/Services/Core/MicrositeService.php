@@ -28,10 +28,18 @@ class MicrositeService
     public function save(Event $event, array $data): EventPage
     {
         $sections = $this->normalizeSections($data['sections'] ?? []);
-        $page = EventPage::updateOrCreate(
-            ['event_id' => $event->id, 'status' => 'draft'],
-            ['template' => $data['template'] ?? 'default', 'settings' => $data['settings'] ?? []],
-        );
+
+        $page = $event->pages()->where('status', 'draft')->latest()->first();
+
+        if ($page) {
+            $page->update(['template' => $data['template'] ?? 'default', 'settings' => $data['settings'] ?? []]);
+        } else {
+            $page = $event->pages()->create([
+                'status' => 'draft',
+                'template' => $data['template'] ?? 'default',
+                'settings' => $data['settings'] ?? [],
+            ]);
+        }
 
         $page->sections()->delete();
         foreach ($sections as $index => $section) {
@@ -53,6 +61,21 @@ class MicrositeService
         $event->pages()->where('status', 'published')->update(['status' => 'archived']);
         $draft->update(['status' => 'published', 'published_at' => now()]);
         $event->update(['status_key' => 'published', 'is_public' => true, 'published_at' => now()]);
+
+        $newDraft = $event->pages()->create([
+            'status' => 'draft',
+            'template' => $draft->template,
+            'settings' => $draft->settings ?? [],
+        ]);
+        foreach ($draft->sections as $section) {
+            $newDraft->sections()->create([
+                'type' => $section->type,
+                'title' => $section->title,
+                'content' => $section->content,
+                'settings' => $section->settings,
+                'sort_order' => $section->sort_order,
+            ]);
+        }
 
         return $draft->fresh('sections');
     }
@@ -101,6 +124,7 @@ class MicrositeService
             'border-collapse' => '/^(collapse|separate)$/i',
             'border-spacing' => '/^\d+(\.\d+)?(px|em|rem)(\s+\d+(\.\d+)?(px|em|rem))?$/i',
             'width' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
+            'height' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
             'min-width' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
             'max-width' => '/^(auto|none|\d+(\.\d+)?(px|em|rem|%))$/i',
             'padding' => '/^(\d+(\.\d+)?(px|em|rem|%)\s*){1,4}$/i',

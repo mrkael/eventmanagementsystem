@@ -282,6 +282,7 @@ Route::middleware('auth')->group(function () {
 Route::get('/e/{event:custom_url}/{referral?}', [PublicCoreEventController::class, 'show'])->where('referral', '[^/]+')->name('core.public.events.show');
 Route::get('/e/{event:custom_url}/tickets/{ticket}/register', [PublicCoreEventController::class, 'register'])->name('core.public.register');
 Route::post('/e/{event:custom_url}/tickets/{ticket}/register', [PublicCoreEventController::class, 'submit'])->middleware('throttle:10,1')->name('core.public.submit');
+Route::post('/e/{event:custom_url}/register', [PublicCoreEventController::class, 'submitMulti'])->middleware('throttle:10,1')->name('core.public.submit.multi');
 Route::get('/registration/{registration}/success', [PublicCoreEventController::class, 'success'])->middleware('signed')->name('core.public.success');
 
 Route::get('/events/{event:slug}', [EventPageController::class, 'show'])->name('public.events.show');

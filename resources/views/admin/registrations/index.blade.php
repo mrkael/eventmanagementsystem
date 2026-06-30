@@ -1,9 +1,9 @@
 <x-layouts.admin title="Participants" heading="Participants" subheading="{{ $event->title }}">
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('admin.events.show', $event) }}" class="min-h-11 rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50">Event detail</a>
-            <a href="{{ route('admin.events.registrations.builder.edit', $event) }}" class="min-h-11 rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50">Form builder</a>
-            <a href="{{ route('admin.events.registrations.create', $event) }}" class="min-h-11 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800">Admin registration</a>
+            <a href="{{ route('admin.events.show', $event) }}" class="btn btn-outline-primary btn-md">Event detail</a>
+            <a href="{{ route('admin.events.registrations.builder.edit', $event) }}" class="btn btn-outline-primary btn-md">Form builder</a>
+            <a href="{{ route('admin.events.registrations.create', $event) }}" class="btn btn-primary btn-md">Admin registration</a>
         </div>
     </div>
 
@@ -12,7 +12,7 @@
             <input name="search" value="{{ request('search') }}" placeholder="Search name or email" class="min-h-11 rounded-lg border border-slate-300 px-3 text-sm">
             <select name="status" class="min-h-11 rounded-lg border border-slate-300 px-3 text-sm"><option value="">All statuses</option>@foreach($statuses as $status)<option value="{{ $status->value }}" @selected(request('status')===$status->value)>{{ $status->label() }}</option>@endforeach</select>
             <select name="source" class="min-h-11 rounded-lg border border-slate-300 px-3 text-sm"><option value="">All sources</option>@foreach(['public','private','invite','admin','bulk'] as $source)<option value="{{ $source }}" @selected(request('source')===$source)>{{ ucfirst($source) }}</option>@endforeach</select>
-            <button class="min-h-11 rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white">Filter</button>
+            <button class="btn btn-primary btn-md">Filter</button>
         </form>
     </section>
 
@@ -45,7 +45,7 @@
                 <h2 class="font-semibold">Bulk upload</h2>
                 <p class="mt-1 text-sm text-slate-500">CSV headers: name, email, phone, organization.</p>
                 <input type="file" name="file" required class="mt-4 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                <button class="mt-3 min-h-11 w-full rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white">Import CSV</button>
+                <button class="btn btn-primary btn-md mt-3 w-full">Import CSV</button>
             </form>
             <form method="POST" action="{{ route('admin.events.registrations.invite', $event) }}" class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 @csrf
@@ -54,7 +54,7 @@
                     <input name="name" placeholder="Name" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm">
                     <input type="email" name="email" placeholder="Email" required class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm">
                     <input type="date" name="expires_at" class="min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm">
-                    <button class="min-h-11 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white">Create invite</button>
+                    <button class="btn btn-primary btn-md w-full">Create invite</button>
                 </div>
             </form>
         </aside>

@@ -1,8 +1,14 @@
+import Alpine from 'alpinejs';
+import Collapse from '@alpinejs/collapse';
 import EditorJS from '@editorjs/editorjs';
 import QRCode from 'qrcode';
 import Sortable from 'sortablejs';
 import TomSelect from 'tom-select';
 import { Html5Qrcode, Html5QrcodeScanner } from 'html5-qrcode';
+
+Alpine.plugin(Collapse);
+window.Alpine = Alpine;
+Alpine.start();
 
 window.EditorJS = EditorJS;
 window.QRCode = QRCode;

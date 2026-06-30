@@ -38,12 +38,13 @@ class CoreRegistrationService
         $this->validateAvailability($event, $ticket, $data['email'] ?? null, $requirePublishedEvent);
         $this->validateDynamicFields($form, $data['answers'] ?? [], $data['answer_files'] ?? []);
 
-        return DB::transaction(function () use ($data, $event, $form, $requirePublishedEvent, $ticket) {
+        $rawToken = 'CORE-'.$event->id.'-'.Str::upper(Str::random(36));
+
+        $registration = DB::transaction(function () use ($data, $event, $form, $rawToken, $requirePublishedEvent, $ticket) {
             $ticket = Ticket::whereKey($ticket->id)->lockForUpdate()->firstOrFail();
             $this->validateAvailability($event, $ticket, $data['email'] ?? null, $requirePublishedEvent);
 
             $pricing = $this->pricing($event, $ticket, $data['promo_code'] ?? null);
-            $rawToken = 'CORE-'.$event->id.'-'.Str::upper(Str::random(36));
 
             $registration = Registration::create([
                 'event_id' => $event->id,
@@ -72,10 +73,13 @@ class CoreRegistrationService
             }
 
             $this->storeAnswers($registration, $form, $data['answers'] ?? [], $data['answer_files'] ?? []);
-            $this->confirmationEmailService->sendRegistrationConfirmation($registration->fresh(['event.organiserProfile', 'ticket.form.fields', 'answers']), $rawToken);
 
-            return $registration->fresh(['event', 'ticket', 'answers']);
+            return $registration;
         });
+
+        $this->confirmationEmailService->sendRegistrationConfirmation($registration->fresh(['event.organiserProfile', 'ticket.form.fields', 'answers']), $rawToken);
+
+        return $registration->fresh(['event', 'ticket', 'answers']);
     }
 
     public function updateManual(Registration $registration, array $data): Registration

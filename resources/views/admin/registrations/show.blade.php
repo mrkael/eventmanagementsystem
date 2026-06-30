@@ -37,16 +37,16 @@
                 @method('PATCH')
                 <label class="block text-sm font-medium">Change status</label>
                 <select name="status" class="mt-2 min-h-11 w-full rounded-lg border border-slate-300 px-3 text-sm">@foreach($statuses as $status)<option value="{{ $status->value }}" @selected($registration->status === $status)>{{ $status->label() }}</option>@endforeach</select>
-                <button class="mt-3 min-h-11 w-full rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white">Update status</button>
+                <button class="btn btn-primary btn-md mt-3 w-full">Update status</button>
             </form>
             @if($registration->status->value === 'pending')
-                <form method="POST" action="{{ route('admin.events.registrations.approve', [$event, $registration]) }}">@csrf<button class="min-h-11 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white">Approve registration</button></form>
+                <form method="POST" action="{{ route('admin.events.registrations.approve', [$event, $registration]) }}">@csrf<button class="btn btn-primary btn-md w-full">Approve registration</button></form>
             @endif
             @if(in_array($registration->status->value, ['confirmed', 'attended'], true))
-                <form method="POST" action="{{ route('admin.events.attendance.qr', [$event, $registration]) }}">@csrf<button class="min-h-11 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white">Generate attendance QR</button></form>
+                <form method="POST" action="{{ route('admin.events.attendance.qr', [$event, $registration]) }}">@csrf<button class="btn btn-primary btn-md w-full">Generate attendance QR</button></form>
             @endif
-            <a href="{{ route('admin.events.attendance.index', $event) }}" class="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 text-sm font-semibold hover:bg-slate-50">Attendance dashboard</a>
-            <a href="{{ route('admin.events.registrations.index', $event) }}" class="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 text-sm font-semibold hover:bg-slate-50">Back to participants</a>
+            <a href="{{ route('admin.events.attendance.index', $event) }}" class="btn btn-outline-primary btn-md w-full">Attendance dashboard</a>
+            <a href="{{ route('admin.events.registrations.index', $event) }}" class="btn btn-outline-primary btn-md w-full">Back to participants</a>
         </aside>
     </div>
 </x-layouts.admin>

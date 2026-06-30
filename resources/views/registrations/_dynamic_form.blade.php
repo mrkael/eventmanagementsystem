@@ -85,5 +85,5 @@
         </fieldset>
     @endforeach
 
-    <button type="submit" class="min-h-11 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 sm:w-auto">{{ $submitLabel }}</button>
+    <button type="submit" class="btn btn-primary btn-md">{{ $submitLabel }}</button>
 </div>

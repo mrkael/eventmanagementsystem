@@ -14,8 +14,8 @@
             </div>
         </div>
         <div class="mt-6 flex gap-3">
-            <a href="{{ route('admin.roles.edit', $role) }}" class="inline-flex min-h-11 items-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">Edit</a>
-            <a href="{{ route('admin.roles.index') }}" class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back</a>
+            <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-primary btn-md">Edit</a>
+            <a href="{{ route('admin.roles.index') }}" class="btn btn-outline-primary btn-md">Back</a>
         </div>
     </section>
 </x-layouts.admin>

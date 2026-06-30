@@ -49,6 +49,14 @@
                 <button class="ds-button-primary min-h-11">Apply</button>
                 <a href="{{ route('core.events.attendees.index', $event) }}" class="ds-button-secondary min-h-11">Reset</a>
             </div>
+            <label class="lg:col-span-full lg:flex lg:items-center lg:gap-2">
+                <span class="ds-label shrink-0 lg:mb-0">Rows per page</span>
+                <select name="per_page" class="ds-input mt-2 w-28 lg:mt-0" onchange="this.form.submit()">
+                    @foreach([10, 50, 100] as $option)
+                        <option value="{{ $option }}" @selected((int) request('per_page', 10) === $option)>{{ $option }}</option>
+                    @endforeach
+                </select>
+            </label>
         </form>
     </x-ui.card>
 

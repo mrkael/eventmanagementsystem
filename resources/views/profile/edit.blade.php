@@ -37,7 +37,7 @@
             </div>
         </div>
         <div class="mt-6">
-            <button class="min-h-11 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">Update profile</button>
+            <button class="btn btn-primary btn-md">Update profile</button>
         </div>
     </form>
 </x-layouts.admin>

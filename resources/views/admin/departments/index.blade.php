@@ -8,10 +8,10 @@
                     <option value="active" @selected(request('status') === 'active')>Active</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
                 </select>
-                <button class="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50">Filter</button>
+                <button class="btn btn-outline-primary btn-md">Filter</button>
             </form>
             @if (auth()->user()->hasPermission('departments.create'))
-                <a href="{{ route('admin.departments.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">New department</a>
+                <a href="{{ route('admin.departments.create') }}" class="btn btn-primary btn-md">New department</a>
             @endif
         </div>
         <div class="overflow-x-auto">
@@ -28,10 +28,10 @@
                             <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $department->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">{{ $department->is_active ? 'Active' : 'Inactive' }}</span></td>
                             <td class="px-5 py-4">
                                 <div class="flex justify-end gap-2">
-                                    <a href="{{ route('admin.departments.edit', $department) }}" class="rounded-lg border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50">Edit</a>
+                                    <a href="{{ route('admin.departments.edit', $department) }}" class="btn btn-outline-primary btn-sm">Edit</a>
                                     <form method="POST" action="{{ route('admin.departments.destroy', $department) }}" onsubmit="return confirm('Delete this department?')">
                                         @csrf @method('DELETE')
-                                        <button class="rounded-lg border border-red-200 px-3 py-2 font-semibold text-red-700 hover:bg-red-50">Delete</button>
+                                        <button class="btn btn-outline-danger btn-sm">Delete</button>
                                     </form>
                                 </div>
                             </td>

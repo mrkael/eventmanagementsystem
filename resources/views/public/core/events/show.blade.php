@@ -10,9 +10,9 @@
 <body class="bg-white text-slate-950">
     @php
         $sections = $sections ?? $event->publishedPage?->sections ?? collect();
-        $oldTicketId = old('selected_ticket_id');
-        $oldQuantity = old('ticket_quantity', 1);
-        $oldParticipants = old('participants', []);
+        $oldSelections = old('ticket_selections', []);
+        $hasOldSubmission = !empty($oldSelections);
+        $multiSubmitUrl = route('core.public.submit.multi', ['event' => $event->custom_url]);
         $safeCssProps = [
             'text-align' => '/^(left|center|right|justify)$/i',
             'float' => '/^(left|right|none)$/i',
@@ -20,6 +20,7 @@
             'border-collapse' => '/^(collapse|separate)$/i',
             'border-spacing' => '/^\d+(\.\d+)?(px|em|rem)(\s+\d+(\.\d+)?(px|em|rem))?$/i',
             'width' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
+            'height' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
             'min-width' => '/^(auto|\d+(\.\d+)?(px|em|rem|%))$/i',
             'max-width' => '/^(auto|none|\d+(\.\d+)?(px|em|rem|%))$/i',
             'padding' => '/^(\d+(\.\d+)?(px|em|rem|%)\s*){1,4}$/i',
@@ -88,117 +89,170 @@
         </div>
     @endif
 
-    <main data-public-event data-tickets='@json($ticketData)' data-old-ticket-id="{{ $oldTicketId }}" data-old-quantity="{{ $oldQuantity }}" data-old-participants='@json($oldParticipants)' data-referral="{{ $referral ?? '' }}">
-        @forelse($sections as $section)
-            @if($section->type === 'registration_form')
-                @continue
-            @endif
+    <main data-public-event data-tickets='@json($ticketData)' data-old-selections='@json($oldSelections)' data-multi-submit-url="{{ $multiSubmitUrl }}" data-referral="{{ $referral ?? '' }}">
+        <div class="mx-auto max-w-5xl px-6 lg:px-10">
+            @forelse($sections as $section)
+                @if($section->type === 'registration_form')
+                    @continue
+                @endif
 
-            @if($section->type === 'hero')
-                <section class="px-4 py-10 md:py-14">
-                    <div class="mx-auto max-w-6xl rounded-[32px] bg-slate-950 px-6 py-12 text-white md:px-10 md:py-16">
-                        <p class="text-sm font-black uppercase text-blue-200">Event</p>
-                        <h1 class="mt-4 max-w-4xl text-4xl font-black tracking-normal md:text-6xl">{{ $section->title ?: $event->title }}</h1>
-                        <div class="mt-5 max-w-2xl space-y-3 text-lg leading-8 text-white/75 [&_a]:font-bold [&_a]:text-blue-200 [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) ?: e($event->description) !!}</div>
-                        <p class="mt-6 text-sm font-bold text-white/75">{{ $event->starts_at?->format('d M Y, H:i') }} - {{ $event->location }}</p>
-                    </div>
-                </section>
-            @elseif($section->type === 'ticket_selection')
-                <section id="tickets" class="px-4 py-10">
-                    <div class="mx-auto max-w-6xl rounded-[28px] bg-slate-50 p-6 md:p-8">
-                        <div>
-                            <p class="text-xs font-black uppercase text-blue-600">Ticket & Form</p>
-                            <h2 class="mt-2 text-3xl font-black text-slate-950">{{ $section->title ?: 'Ticket & Form' }}</h2>
-                            <p class="mt-2 max-w-3xl text-slate-500">{{ strip_tags($section->content) ?: 'Choose your ticket. The linked registration form will appear on this page.' }}</p>
-                        </div>
+                @if(!$loop->first)
+                    <hr class="border-slate-100">
+                @endif
 
-                        @if($errors->any())
-                            <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                                {{ $errors->first() }}
-                            </div>
-                        @endif
-
-                        @if(session('status'))
-                            <div class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
-                                {{ session('status') }}
-                            </div>
-                        @endif
-
-                        <div class="mt-6 grid gap-4 lg:grid-cols-2">
-                            @forelse($tickets as $ticket)
-                                <article class="rounded-2xl border border-slate-200 bg-white p-5">
-                                    <h3 class="font-black text-slate-950">{{ $ticket->name }}</h3>
-                                    <p class="mt-2 text-sm leading-6 text-slate-500">{{ $ticket->description ?: 'No description' }}</p>
-                                    <div class="mt-4 grid grid-cols-3 gap-3 text-xs font-bold text-slate-500">
-                                        <span>Available<br><strong class="text-slate-950">{{ $ticket->available_quantity }} / {{ $ticket->quantity }}</strong></span>
-                                        <span>Min<br><strong class="text-slate-950">{{ $ticket->min_quantity }}</strong></span>
-                                        <span>Max<br><strong class="text-slate-950">{{ $ticket->max_quantity }}</strong></span>
-                                    </div>
-                                    <div class="mt-5 flex flex-col gap-3 sm:flex-row">
-                                        <label class="flex-1">
-                                            <span class="text-xs font-black uppercase text-slate-500">Quantity</span>
-                                            <select data-ticket-quantity="{{ $ticket->id }}" class="mt-2 min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold">
-                                                @for($quantity = $ticket->min_quantity; $quantity <= min($ticket->max_quantity, $ticket->available_quantity); $quantity++)
-                                                    <option value="{{ $quantity }}">{{ $quantity }}</option>
-                                                @endfor
-                                            </select>
-                                        </label>
-                                        <button type="button" data-select-ticket="{{ $ticket->id }}" class="self-end rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white">Select Ticket</button>
-                                    </div>
-                                </article>
-                            @empty
-                                <p class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-bold text-amber-800">No active tickets are currently available.</p>
-                            @endforelse
-                        </div>
-
-                        <div data-registration-form class="mt-6 rounded-[24px] border border-slate-200 bg-white p-5">
-                            <p class="text-sm font-bold text-slate-500">Select a ticket above to display its registration form here.</p>
-                        </div>
-                    </div>
-                </section>
-            @elseif($section->type === 'footer')
-                <footer class="px-4 py-10">
-                    <div class="mx-auto max-w-6xl rounded-[28px] border border-slate-200 bg-white p-8 text-center">
-                        <h2 class="text-2xl font-black text-slate-950">{{ $section->title ?: $event->title }}</h2>
-                        <div class="mt-2 space-y-2 text-slate-500 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:mx-auto [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) ?: e($event->location) !!}</div>
-                    </div>
-                </footer>
-            @elseif($section->type === 'image')
-                <section class="px-4 py-10">
-                    <div class="mx-auto max-w-6xl">
-                        @if($section->settings['image_url'] ?? null)
-                            <img src="{{ $section->settings['image_url'] }}" alt="{{ $section->title }}" class="aspect-[16/7] w-full rounded-[28px] object-cover">
+                @if($section->type === 'hero')
+                    <section class="py-16 text-center">
+                        @if(trim($section->title ?? ''))
+                            <h1 class="text-5xl font-black leading-tight text-slate-950 md:text-6xl">{{ $section->title }}</h1>
                         @endif
                         @if($siteHtml($section->content))
-                            <div class="mt-4 space-y-3 leading-7 text-slate-600 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
+                            <div class="mt-6 space-y-4 text-lg leading-8 text-slate-500 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:mx-auto [&_img]:block [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
                         @endif
-                    </div>
+                    </section>
+
+                @elseif($section->type === 'ticket_selection')
+                    <section id="tickets" class="py-16">
+
+                        {{-- Step 1: Ticket Selection --}}
+                        <div data-ticket-step @if($hasOldSubmission) style="display:none" @endif>
+                            @if(session('status'))
+                                <div class="mb-5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3.5 text-sm font-medium text-emerald-700">{{ session('status') }}</div>
+                            @endif
+
+                            <div class="space-y-4">
+                                @forelse($tickets as $ticket)
+                                    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                                        <div class="flex items-stretch">
+                                            <div class="flex-1 p-6 sm:p-8">
+                                                <h3 class="text-xl font-bold text-slate-900">{{ $ticket->name }}</h3>
+                                                @if($ticket->description)
+                                                    <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ $ticket->description }}</p>
+                                                @endif
+                                                @if($ticket->sales_end_at)
+                                                    <div class="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                                                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+                                                        <span>Registration ends {{ $ticket->sales_end_at->format('d M Y') }}</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div class="w-px bg-slate-100"></div>
+                                            <div class="flex w-44 shrink-0 flex-col items-center justify-center gap-2 p-6">
+                                                <span class="text-xs font-medium text-slate-400">Quantity</span>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button" data-qty-dec="{{ $ticket->id }}" class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xl leading-none text-slate-400 transition hover:text-slate-700 active:bg-slate-50">−</button>
+                                                    <input type="number" data-ticket-quantity="{{ $ticket->id }}"
+                                                           value="0"
+                                                           min="0"
+                                                           max="{{ min($ticket->max_quantity, $ticket->available_quantity) }}"
+                                                           class="ticket-qty-input h-10 w-14 rounded-lg border border-slate-200 bg-white text-center text-sm font-bold text-slate-900 outline-none focus:border-slate-400">
+                                                    <button type="button" data-qty-inc="{{ $ticket->id }}" class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xl leading-none text-slate-400 transition hover:text-slate-700 active:bg-slate-50">+</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
+                                        <p class="text-sm font-medium text-slate-500">No active tickets are currently available.</p>
+                                        <p class="mt-1 text-xs text-slate-400">Please check back later.</p>
+                                    </div>
+                                @endforelse
+                            </div>
+
+                            <div id="ticket-register-wrap" class="mt-8 flex justify-center" style="display:none">
+                                <button type="button" id="ticket-register-btn" class="btn-71">
+                                    Register
+                                </button>
+                            </div>
+                        </div>
+
+                        {{-- Step 2: Registration Form --}}
+                        <div data-form-step @if(!$hasOldSubmission) class="hidden" @endif>
+                            @if($errors->any())
+                                <div class="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3.5 text-sm text-red-700">
+                                    <svg class="mt-0.5 h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/></svg>
+                                    <span class="font-medium">{{ $errors->first() }}</span>
+                                </div>
+                            @endif
+
+                            <button type="button" data-back-to-tickets class="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                                Back to ticket selection
+                            </button>
+
+                            <div data-registration-form>
+                                <p class="py-8 text-center text-sm text-slate-400">Loading registration form&hellip;</p>
+                            </div>
+                        </div>
+
+                    </section>
+
+                @elseif($section->type === 'footer')
+                    <footer class="py-16 text-center">
+                        @if(trim($section->title ?? ''))
+                            <h2 class="text-2xl font-black text-slate-950">{{ $section->title }}</h2>
+                        @endif
+                        @if($siteHtml($section->content))
+                            <div class="mt-3 space-y-3 text-slate-500 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:mx-auto [&_img]:block [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
+                        @endif
+                    </footer>
+
+                @elseif($section->type === 'image')
+                    <section class="py-14">
+                        @if($section->settings['image_url'] ?? null)
+                            <img src="{{ $section->settings['image_url'] }}" alt="{{ $section->title }}" class="h-auto w-full rounded-2xl">
+                        @endif
+                        @if($siteHtml($section->content))
+                            <div class="mt-5 space-y-3 leading-7 text-slate-600 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:mx-auto [&_img]:block [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
+                        @endif
+                    </section>
+
+                @elseif($section->type === 'button_cta')
+                    <section class="py-16 text-center">
+                        @if(trim($section->title ?? ''))
+                            <h2 class="text-3xl font-black text-slate-950">{{ $section->title }}</h2>
+                        @endif
+                        @if($siteHtml($section->content))
+                            <div class="mt-4 space-y-3 text-lg text-slate-500 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:mx-auto [&_img]:block [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
+                        @endif
+                        <a href="{{ $section->settings['button_url'] ?? '#tickets' }}" class="mt-7 inline-flex rounded-full bg-slate-950 px-8 py-3.5 text-sm font-black text-white">{{ $section->settings['button_label'] ?? 'View Tickets' }}</a>
+                    </section>
+
+                @else
+                    <section class="py-14">
+                        @if(trim($section->title ?? ''))
+                            <h2 class="text-3xl font-black text-slate-950">{{ $section->title }}</h2>
+                        @endif
+                        @if($siteHtml($section->content))
+                            <div class="mt-5 space-y-4 text-base leading-8 text-slate-600 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:mx-auto [&_img]:block [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
+                        @endif
+                    </section>
+                @endif
+            @empty
+                <section class="py-24 text-center">
+                    <h1 class="text-5xl font-black text-slate-950">{{ $event->title }}</h1>
+                    <p class="mt-5 text-lg text-slate-500">{{ $event->description }}</p>
                 </section>
-            @elseif($section->type === 'button_cta')
-                <section class="px-4 py-10">
-                    <div class="mx-auto max-w-6xl rounded-[28px] bg-blue-50 p-8 text-center">
-                        <h2 class="text-3xl font-black text-slate-950">{{ $section->title }}</h2>
-                        <div class="mt-3 space-y-3 text-slate-600 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:mx-auto [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
-                        <a href="{{ $section->settings['button_url'] ?? '#tickets' }}" class="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white">{{ $section->settings['button_label'] ?? 'View Tickets' }}</a>
-                    </div>
-                </section>
-            @else
-                <section class="px-4 py-10">
-                    <div class="mx-auto max-w-6xl rounded-[28px] border border-slate-200 bg-white p-8">
-                        <h2 class="text-3xl font-black text-slate-950">{{ $section->title }}</h2>
-                        <div class="mt-4 space-y-3 leading-7 text-slate-600 [&_a]:font-bold [&_a]:text-blue-700 [&_img]:rounded-2xl [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">{!! $siteHtml($section->content) !!}</div>
-                    </div>
-                </section>
-            @endif
-        @empty
-            <section class="px-4 py-16">
-                <div class="mx-auto max-w-5xl">
-                    <h1 class="text-4xl font-bold">{{ $event->title }}</h1>
-                    <p class="mt-4 text-slate-600">{{ $event->description }}</p>
-                </div>
-            </section>
-        @endforelse
+            @endforelse
+        </div>
     </main>
+
+    <style>
+        .ticket-qty-input::-webkit-inner-spin-button,
+        .ticket-qty-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .ticket-qty-input { -moz-appearance: textfield; }
+
+        .btn-71, .btn-71 *, .btn-71 :after, .btn-71 :before, .btn-71:after, .btn-71:before { border: 0 solid; box-sizing: border-box; }
+        .btn-71 { -webkit-tap-highlight-color: transparent; -webkit-appearance: button; background-color: #000; background-image: none; color: #fff; cursor: pointer; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji; font-size: 80%; line-height: 1.5; margin: 0; -webkit-mask-image: -webkit-radial-gradient(#000, #fff); padding: 0; }
+        .btn-71:disabled { cursor: default; }
+        .btn-71:-moz-focusring { outline: auto; }
+        .btn-71 svg { display: block; vertical-align: middle; }
+        .btn-71 [hidden] { display: none; }
+        .btn-71 { border: 1px solid; border-radius: 999px; box-sizing: border-box; display: block; font-weight: 900; overflow: hidden; padding: 1rem 2rem; position: relative; text-transform: uppercase; }
+        .btn-71:before { --opacity: 0.2; aspect-ratio: 1; background: #fff; border-radius: 50%; content: ""; left: 50%; opacity: var(--opacity); position: absolute; top: 50%; transform: translate(-50%, -50%) scale(0); width: 100%; z-index: -1; }
+        .btn-71:hover:before { -webkit-animation: btn71enlarge 1s forwards; animation: btn71enlarge 1s forwards; }
+        @-webkit-keyframes btn71enlarge { to { opacity: 0; transform: translate(-50%, -50%) scale(4); } }
+        @keyframes btn71enlarge { to { opacity: 0; transform: translate(-50%, -50%) scale(4); } }
+    </style>
 
     <script>
         (() => {
@@ -207,6 +261,7 @@
 
             const tickets = JSON.parse(root.dataset.tickets || '[]');
             const referral = root.dataset.referral || '';
+            const multiSubmitUrl = root.dataset.multiSubmitUrl || '';
             const formTarget = root.querySelector('[data-registration-form]');
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
             const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
@@ -214,8 +269,11 @@
             const successIcon = '<svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>';
             const loadingIcon = '<svg class="size-6 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle><path class="opacity-75" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6z"></path></svg>';
 
-            const fileUploadHtml = (field, attendeeIndex, name, required) => {
-                const uploadId = `upload_${attendeeIndex}_${String(field.key || field.label).replace(/[^a-z0-9]+/gi, '_')}`;
+            const fileUploadHtml = (field, ticketId, pIdx) => {
+                const key = field.key || field.label.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                const name = `ticket_selections[${ticketId}][${pIdx}][${key}]`;
+                const required = field.is_required ? 'required' : '';
+                const uploadId = `upload_${ticketId}_${pIdx}_${String(field.key || field.label).replace(/[^a-z0-9]+/gi, '_')}`;
 
                 return `
                     <div data-file-upload class="block">
@@ -251,65 +309,172 @@
                 `;
             };
 
-            const fieldHtml = (field, attendeeIndex) => {
+            const fieldHtml = (field, ticketId, pIdx) => {
                 const key = field.key || field.label.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-                const name = `participants[${attendeeIndex}][${key}]`;
+                const name = `ticket_selections[${ticketId}][${pIdx}][${key}]`;
                 const required = field.is_required ? 'required' : '';
-                const label = `<span class="text-sm font-bold text-slate-700">${escapeHtml(field.label)} ${field.is_required ? '<span class="text-red-600">*</span>' : ''}</span>`;
-                const base = `name="${escapeHtml(name)}" ${required} class="mt-2 min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm" placeholder="${escapeHtml(field.placeholder || field.label)}"`;
+                const label = `<label class="mb-1.5 block text-sm font-medium text-slate-700">${escapeHtml(field.label)}${field.is_required ? ' <span class="text-red-500">*</span>' : ''}</label>`;
+                const inputCls = `block h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20`;
+                const base = `name="${escapeHtml(name)}" ${required} class="${inputCls}" placeholder="${escapeHtml(field.placeholder || field.label)}"`;
 
                 if (field.type === 'textarea') {
-                    return `<label class="block">${label}<textarea ${base}></textarea></label>`;
+                    return `<div>${label}<textarea name="${escapeHtml(name)}" ${required} placeholder="${escapeHtml(field.placeholder || field.label)}" class="block w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 min-h-[110px] resize-y"></textarea></div>`;
                 }
                 if (field.type === 'file') {
-                    return fileUploadHtml(field, attendeeIndex, name, required);
+                    return fileUploadHtml(field, ticketId, pIdx);
                 }
                 if (['dropdown', 'radio', 'checkbox'].includes(field.type)) {
                     const options = Array.isArray(field.options) ? field.options : [];
                     if (field.type === 'dropdown') {
-                        return `<label class="block">${label}<select ${base}>${options.map((option) => `<option>${escapeHtml(option)}</option>`).join('')}</select></label>`;
+                        return `<div>${label}<select ${base}><option value="">Select an option</option>${options.map((option) => `<option>${escapeHtml(option)}</option>`).join('')}</select></div>`;
                     }
-                    return `<fieldset class="rounded-2xl border border-slate-200 p-4"><legend class="px-1 text-sm font-bold text-slate-700">${escapeHtml(field.label)} ${field.is_required ? '<span class="text-red-600">*</span>' : ''}</legend><div class="mt-3 space-y-2">${options.map((option) => `<label class="flex items-center gap-2 text-sm text-slate-700"><input type="${field.type}" name="${escapeHtml(name)}${field.type === 'checkbox' ? '[]' : ''}" value="${escapeHtml(option)}" ${field.type === 'radio' ? required : ''}> ${escapeHtml(option)}</label>`).join('')}</div>${field.type === 'checkbox' && field.is_required ? `<input type="text" class="sr-only" tabindex="-1" aria-hidden="true" data-checkbox-required="${escapeHtml(name)}" required>` : ''}</fieldset>`;
+                    return `<div>${label}<div class="mt-2 space-y-2.5">${options.map((option) => `<label class="flex cursor-pointer items-center gap-3 text-sm text-slate-700"><input type="${field.type}" name="${escapeHtml(name)}${field.type === 'checkbox' ? '[]' : ''}" value="${escapeHtml(option)}" class="h-4 w-4 accent-indigo-600" ${field.type === 'radio' ? required : ''}><span>${escapeHtml(option)}</span></label>`).join('')}</div>${field.type === 'checkbox' && field.is_required ? `<input type="text" class="sr-only" tabindex="-1" aria-hidden="true" data-checkbox-required="${escapeHtml(name)}" required>` : ''}</div>`;
                 }
                 const type = ['email', 'number', 'date'].includes(field.type) ? field.type : 'text';
-                return `<label class="block">${label}<input type="${type}" ${base}></label>`;
+                return `<div>${label}<input type="${type}" ${base}></div>`;
             };
 
-            const renderForm = (ticket, quantity) => {
-                if (!ticket?.form) {
-                    formTarget.innerHTML = '<p class="text-sm font-bold text-amber-800">This ticket does not have a registration form assigned.</p>';
-                    return;
-                }
+            const snapshotFormValues = () => {
+                const saved = {};
+                formTarget.querySelectorAll('input:not([type=hidden]):not([type=file]), select, textarea').forEach((el) => {
+                    if (!el.name) return;
+                    const match = el.name.match(/^ticket_selections\[(\d+)\]\[(\d+)\]\[(.+?)\](\[\])?$/);
+                    if (!match) return;
+                    const tId = match[1];
+                    const pIdx = Number(match[2]);
+                    const key = match[3];
+                    if (!saved[tId]) saved[tId] = {};
+                    if (!saved[tId][pIdx]) saved[tId][pIdx] = {};
+                    if (el.type === 'checkbox') {
+                        if (!saved[tId][pIdx][key]) saved[tId][pIdx][key] = { type: 'checkbox', values: [] };
+                        if (el.checked) saved[tId][pIdx][key].values.push(el.value);
+                    } else if (el.type === 'radio') {
+                        if (el.checked) saved[tId][pIdx][key] = { type: 'radio', value: el.value };
+                    } else {
+                        saved[tId][pIdx][key] = { type: 'text', value: el.value };
+                    }
+                });
+                return saved;
+            };
+
+            const restoreFormValues = (saved) => {
+                Object.entries(saved).forEach(([tId, participants]) => {
+                    Object.entries(participants).forEach(([pIdxStr, fields]) => {
+                        const pIdx = Number(pIdxStr);
+                        Object.entries(fields).forEach(([key, data]) => {
+                            const prefix = `ticket_selections[${tId}][${pIdx}]`;
+                            if (data.type === 'checkbox') {
+                                formTarget.querySelectorAll(`input[name="${prefix}[${key}][]"]`).forEach((cb) => {
+                                    cb.checked = data.values.includes(cb.value);
+                                });
+                            } else if (data.type === 'radio') {
+                                const radio = formTarget.querySelector(`input[type="radio"][name="${prefix}[${key}]"][value="${data.value}"]`);
+                                if (radio) radio.checked = true;
+                            } else {
+                                const el = formTarget.querySelector(`[name="${prefix}[${key}]"]`);
+                                if (el) el.value = data.value;
+                            }
+                        });
+                    });
+                });
+            };
+
+            const refreshAccordionBadges = () => {
+                formTarget.querySelectorAll('[data-accordion-item]').forEach((item) => {
+                    const badge = item.querySelector('[data-accordion-badge]');
+                    if (!badge) return;
+                    const required = Array.from(item.querySelectorAll('input[required], select[required], textarea[required]'))
+                        .filter((el) => !el.classList.contains('sr-only'));
+                    const filled = required.length > 0 && required.every((el) => {
+                        if (el.type === 'radio') return item.querySelector(`input[name="${CSS.escape(el.name)}"]:checked`) !== null;
+                        return el.value.trim() !== '';
+                    });
+                    badge.classList.toggle('hidden', !filled);
+                    badge.classList.toggle('flex', filled);
+                });
+            };
+
+            const renderForms = (selections) => {
+                const selKey = JSON.stringify(selections.map((s) => `${s.ticket.id}:${s.qty}`));
+                const savedValues = formTarget.dataset.renderedSelections === selKey ? snapshotFormValues() : {};
+
+                const allOpenEntries = selections.flatMap(({ ticket, qty }) => {
+                    if (!ticket?.form || qty <= 1) return [];
+                    return Array.from({ length: qty }, (_, pIdx) => `'${ticket.id}-${pIdx}': ${pIdx === 0}`);
+                }).join(', ');
+
+                const sectionsHtml = selections.map(({ ticket, qty }) => {
+                    if (!ticket?.form) {
+                        return `<div class="mb-6 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 px-6 py-4 text-sm text-amber-700"><strong>${escapeHtml(ticket.name)}</strong> — No registration form assigned for this ticket.</div>`;
+                    }
+
+                    const participantContent = qty === 1
+                        ? `<div class="divide-y divide-slate-100"><div class="px-6 py-6"><div class="space-y-5">${(ticket.form.fields || []).map((f) => fieldHtml(f, ticket.id, 0)).join('')}</div></div></div>`
+                        : (() => {
+                            const items = Array.from({ length: qty }, (_, pIdx) => `
+                                <div data-accordion-item="${ticket.id}-${pIdx}">
+                                    <button type="button"
+                                            @click="open['${ticket.id}-${pIdx}'] = !open['${ticket.id}-${pIdx}']; if (open['${ticket.id}-${pIdx}']) $nextTick(() => $el.closest('[data-accordion-item]').scrollIntoView({ behavior: 'smooth', block: 'nearest' }))"
+                                            class="flex w-full items-center justify-between px-6 py-4 text-left transition hover:bg-slate-50 focus:outline-none">
+                                        <span class="flex items-center gap-3">
+                                            <svg :class="open['${ticket.id}-${pIdx}'] ? 'rotate-180' : ''" class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                                            <span class="text-sm font-semibold text-slate-700">Participant ${pIdx + 1}</span>
+                                        </span>
+                                        <span data-accordion-badge="${ticket.id}-${pIdx}" class="hidden h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
+                                            <svg class="h-3 w-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                        </span>
+                                    </button>
+                                    <div x-show="open['${ticket.id}-${pIdx}']" x-collapse>
+                                        <div class="px-6 pb-6 pt-1"><div class="space-y-5">${(ticket.form.fields || []).map((f) => fieldHtml(f, ticket.id, pIdx)).join('')}</div></div>
+                                    </div>
+                                </div>
+                            `).join('');
+                            return `
+                                <div>
+                                    <div class="flex items-center gap-2 border-b border-slate-100 px-6 py-2.5">
+                                        <button type="button" @click="Object.keys(open).filter(k => k.startsWith('${ticket.id}-')).forEach(k => open[k] = true)" class="rounded-md px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700">Expand All</button>
+                                        <span class="text-slate-200">|</span>
+                                        <button type="button" @click="Object.keys(open).filter(k => k.startsWith('${ticket.id}-')).forEach(k => open[k] = false)" class="rounded-md px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700">Collapse All</button>
+                                    </div>
+                                    <div class="divide-y divide-slate-100">${items}</div>
+                                </div>
+                            `;
+                        })();
+
+                    return `
+                        <div class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="px-6 pt-6 pb-5">
+                                <h3 class="text-lg font-semibold text-slate-900">${escapeHtml(ticket.name)}</h3>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <span class="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">${escapeHtml(ticket.form.title)}</span>
+                                    <span class="text-xs text-slate-400">${qty} ticket${qty > 1 ? 's' : ''}</span>
+                                </div>
+                            </div>
+                            <hr class="border-slate-100">
+                            ${participantContent}
+                        </div>
+                    `;
+                }).join('');
 
                 formTarget.innerHTML = `
-                    <form method="POST" action="${escapeHtml(ticket.submit_url)}" enctype="multipart/form-data">
-                        <input type="hidden" name="_token" value="${escapeHtml(csrf)}">
-                        <input type="hidden" name="selected_ticket_id" value="${escapeHtml(ticket.id)}">
-                        <input type="hidden" name="ticket_quantity" value="${escapeHtml(quantity)}">
-                        ${referral ? `<input type="hidden" name="referral" value="${escapeHtml(referral)}">` : ''}
-                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <p class="text-xs font-black uppercase text-blue-600">Registration Form</p>
-                                <h3 class="mt-1 text-2xl font-black text-slate-950">${escapeHtml(ticket.form.title)}</h3>
-                                <p class="mt-1 text-sm text-slate-500">${escapeHtml(ticket.name)} - ${quantity} ticket${quantity > 1 ? 's' : ''}</p>
+                    <div x-data="{ open: { ${allOpenEntries} } }">
+                        <form method="POST" action="${escapeHtml(multiSubmitUrl)}" enctype="multipart/form-data">
+                            <input type="hidden" name="_token" value="${escapeHtml(csrf)}">
+                            ${referral ? `<input type="hidden" name="referral" value="${escapeHtml(referral)}">` : ''}
+                            ${sectionsHtml}
+                            <div class="mt-2 flex justify-end">
+                                <button type="submit" class="rounded-lg bg-slate-900 px-8 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:bg-slate-800">Submit Registration</button>
                             </div>
-                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase text-emerald-700">Ready</span>
-                        </div>
-                        <div class="mt-6 space-y-8">
-                            ${Array.from({ length: quantity }, (_, attendeeIndex) => `
-                                <section class="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                                    <h4 class="font-black text-slate-950">Participant ${attendeeIndex + 1}</h4>
-                                    <div class="mt-4 space-y-4">
-                                        ${(ticket.form.fields || []).map((field) => fieldHtml(field, attendeeIndex)).join('')}
-                                    </div>
-                                </section>
-                            `).join('')}
-                        </div>
-                        <div class="mt-6 flex justify-end">
-                            <button type="submit" class="rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white">Submit Registration</button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 `;
+
+                formTarget.dataset.renderedSelections = selKey;
+                if (window.Alpine) window.Alpine.initTree(formTarget);
+                if (Object.keys(savedValues).length) {
+                    restoreFormValues(savedValues);
+                    refreshAccordionBadges();
+                }
                 formTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
             };
 
@@ -338,10 +503,7 @@
                     loadingName.textContent = file.name;
                     progress.style.width = '45%';
 
-                    window.setTimeout(() => {
-                        progress.style.width = '100%';
-                    }, 120);
-
+                    window.setTimeout(() => { progress.style.width = '100%'; }, 120);
                     window.setTimeout(() => {
                         wrapper.dataset.uploading = 'false';
                         loadingState.classList.add('hidden');
@@ -355,11 +517,14 @@
                 }
 
                 const marker = event.target.closest('input[type="checkbox"]');
-                if (!marker) return;
-                const name = marker.name.replace(/\[\]$/, '');
-                const requiredMarker = root.querySelector(`[data-checkbox-required="${CSS.escape(name)}"]`);
-                if (!requiredMarker) return;
-                requiredMarker.value = root.querySelectorAll(`input[name="${CSS.escape(marker.name)}"]:checked`).length ? 'selected' : '';
+                if (marker) {
+                    const name = marker.name.replace(/\[\]$/, '');
+                    const requiredMarker = root.querySelector(`[data-checkbox-required="${CSS.escape(name)}"]`);
+                    if (requiredMarker) {
+                        requiredMarker.value = root.querySelectorAll(`input[name="${CSS.escape(marker.name)}"]:checked`).length ? 'selected' : '';
+                    }
+                }
+                updateAccordionBadge(event.target);
             });
 
             root.addEventListener('submit', (event) => {
@@ -424,25 +589,127 @@
                         actions.classList.add('hidden');
                         actions.classList.remove('flex');
                     }
-
-                    if (replaceFile) {
-                        fileInput.click();
-                    }
-
+                    if (replaceFile) fileInput.click();
                     return;
                 }
 
-                const button = event.target.closest('[data-select-ticket]');
-                if (!button) return;
-                const ticket = tickets.find((item) => String(item.id) === String(button.dataset.selectTicket));
-                const quantity = Number(root.querySelector(`[data-ticket-quantity="${button.dataset.selectTicket}"]`)?.value || ticket?.min_quantity || 1);
-                renderForm(ticket, quantity);
+                const dec = event.target.closest('[data-qty-dec]');
+                const inc = event.target.closest('[data-qty-inc]');
+                if (dec || inc) {
+                    const id = (dec || inc).dataset[dec ? 'qtyDec' : 'qtyInc'];
+                    const input = root.querySelector(`[data-ticket-quantity="${id}"]`);
+                    if (input) {
+                        const min = input.min !== '' ? Number(input.min) : 0;
+                        const max = Number(input.max) || 99;
+                        const next = Math.min(max, Math.max(min, Number(input.value) + (dec ? -1 : 1)));
+                        input.value = next;
+                        syncRegisterBtn();
+                    }
+                    return;
+                }
+
+                if (event.target.closest('[data-back-to-tickets]')) {
+                    const ticketStep = root.querySelector('[data-ticket-step]');
+                    const formStep = root.querySelector('[data-form-step]');
+                    if (formStep) formStep.classList.add('hidden');
+                    if (ticketStep) ticketStep.style.display = '';
+                    root.querySelector('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return;
+                }
+
+                if (event.target.closest('#ticket-register-btn')) {
+                    const selections = tickets
+                        .map((t) => ({ ticket: t, qty: Number(root.querySelector(`[data-ticket-quantity="${t.id}"]`)?.value) || 0 }))
+                        .filter((s) => s.qty > 0);
+                    if (!selections.length) return;
+                    const ticketStep = root.querySelector('[data-ticket-step]');
+                    const formStep = root.querySelector('[data-form-step]');
+                    if (ticketStep) ticketStep.style.display = 'none';
+                    if (formStep) formStep.classList.remove('hidden');
+                    renderForms(selections);
+                    return;
+                }
             });
 
-            const oldTicketId = root.dataset.oldTicketId;
-            if (oldTicketId) {
-                const ticket = tickets.find((item) => String(item.id) === String(oldTicketId));
-                renderForm(ticket, Number(root.dataset.oldQuantity || ticket?.min_quantity || 1));
+            const syncRegisterBtn = () => {
+                const wrap = root.querySelector('#ticket-register-wrap');
+                if (!wrap) return;
+                const hasQty = Array.from(root.querySelectorAll('[data-ticket-quantity]')).some((el) => Number(el.value) > 0);
+                wrap.style.display = hasQty ? 'flex' : 'none';
+            };
+
+            const updateAccordionBadge = (target) => {
+                const item = target.closest('[data-accordion-item]');
+                if (!item) return;
+                const badge = item.querySelector('[data-accordion-badge]');
+                if (!badge) return;
+                const required = Array.from(item.querySelectorAll('input[required], select[required], textarea[required]'))
+                    .filter((el) => !el.classList.contains('sr-only'));
+                const filled = required.length > 0 && required.every((el) => {
+                    if (el.type === 'radio') return item.querySelector(`input[name="${CSS.escape(el.name)}"]:checked`) !== null;
+                    return el.value.trim() !== '';
+                });
+                badge.classList.toggle('hidden', !filled);
+                badge.classList.toggle('flex', filled);
+            };
+
+            root.addEventListener('input', (event) => {
+                if (event.target.matches('[data-ticket-quantity]')) syncRegisterBtn();
+                updateAccordionBadge(event.target);
+            });
+
+            const oldSelectionsRaw = root.dataset.oldSelections;
+            if (oldSelectionsRaw) {
+                try {
+                    const oldSelections = JSON.parse(oldSelectionsRaw);
+                    const entries = Object.entries(oldSelections || {});
+                    if (entries.length) {
+                        const selections = entries
+                            .map(([ticketId, participants]) => ({
+                                ticket: tickets.find((t) => String(t.id) === String(ticketId)),
+                                qty: Object.keys(participants).length,
+                            }))
+                            .filter((s) => s.ticket && s.qty > 0);
+
+                        if (selections.length) {
+                            selections.forEach(({ ticket, qty }) => {
+                                const qtyInput = root.querySelector(`[data-ticket-quantity="${ticket.id}"]`);
+                                if (qtyInput) qtyInput.value = qty;
+                            });
+                            syncRegisterBtn();
+
+                            const ticketStep = root.querySelector('[data-ticket-step]');
+                            const formStep = root.querySelector('[data-form-step]');
+                            if (ticketStep) ticketStep.style.display = 'none';
+                            if (formStep) formStep.classList.remove('hidden');
+
+                            renderForms(selections);
+
+                            entries.forEach(([ticketId, participants]) => {
+                                Object.entries(participants).forEach(([pIdx, fields]) => {
+                                    Object.entries(fields).forEach(([key, value]) => {
+                                        const prefix = `ticket_selections[${ticketId}][${pIdx}]`;
+                                        if (Array.isArray(value)) {
+                                            value.forEach((v) => {
+                                                const cb = formTarget.querySelector(`input[type="checkbox"][name="${prefix}[${key}][]"][value="${v}"]`);
+                                                if (cb) cb.checked = true;
+                                            });
+                                        } else {
+                                            const radio = formTarget.querySelector(`input[type="radio"][name="${prefix}[${key}]"][value="${value}"]`);
+                                            if (radio) {
+                                                radio.checked = true;
+                                            } else {
+                                                const el = formTarget.querySelector(`[name="${prefix}[${key}]"]`);
+                                                if (el && el.type !== 'file') el.value = value;
+                                            }
+                                        }
+                                    });
+                                });
+                            });
+                            refreshAccordionBadges();
+                        }
+                    }
+                } catch (e) {}
             }
         })();
     </script>

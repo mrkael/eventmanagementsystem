@@ -7,8 +7,8 @@
                     <p class="text-sm text-slate-500">Use a laptop camera or mobile device camera to scan a participant QR code.</p>
                 </div>
                 <div class="flex gap-2">
-                    <button type="button" data-start class="min-h-11 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">Start camera</button>
-                    <button type="button" data-stop class="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50">Stop</button>
+                    <button type="button" data-start class="btn btn-primary btn-md">Start camera</button>
+                    <button type="button" data-stop class="btn btn-outline-primary btn-md">Stop</button>
                 </div>
             </div>
             <div id="qr-reader" class="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-slate-950"></div>
@@ -31,11 +31,11 @@
                 <label class="mt-3 block text-sm font-medium">Notes</label>
                 <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
                 <div class="mt-4 grid gap-2">
-                    <button data-action="check-in" class="min-h-11 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white">Check in</button>
-                    <button data-action="check-out" class="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50">Check out</button>
+                    <button data-action="check-in" class="btn btn-primary btn-md">Check in</button>
+                    <button data-action="check-out" class="btn btn-outline-primary btn-md">Check out</button>
                 </div>
             </form>
-            <a href="{{ route('admin.events.attendance.index', $event) }}" class="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50">Back to dashboard</a>
+            <a href="{{ route('admin.events.attendance.index', $event) }}" class="btn btn-outline-primary btn-md w-full">Back to dashboard</a>
         </aside>
     </div>
 

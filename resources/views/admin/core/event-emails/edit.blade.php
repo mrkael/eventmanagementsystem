@@ -68,19 +68,13 @@
                         <a href="{{ route('core.events.email.preview', $event) }}" target="_blank" class="ds-button-secondary justify-center">Preview Email</a>
                         <button type="submit" form="send-test-email-form" class="ds-button-secondary justify-center">Send Test Email</button>
                     </div>
-                    <p class="mt-3 text-sm leading-6 text-slate-500">
-                        @if(config('event_management.confirmation_email_test_mode'))
-                            Test mode is enabled. Registration emails are delivered to {{ config('event_management.confirmation_email_test_recipient') }} while participant email remains stored normally.
-                        @else
-                            Test mode is disabled. Registration emails are delivered to the participant email address.
-                        @endif
-                    </p>
+                    <p class="mt-3 text-sm leading-6 text-slate-500">Registration emails are delivered to the participant email address.</p>
                 </x-ui.card>
             </div>
 
             <aside class="space-y-6 xl:sticky xl:top-24 xl:self-start">
                 <x-ui.card>
-                    <h2 class="text-xl font-semibold text-slate-950">SMTP Test Settings</h2>
+                    <h2 class="text-xl font-semibold text-slate-950">Email Settings</h2>
                     <div class="mt-4 space-y-3 text-sm">
                         <div class="flex items-center justify-between gap-3">
                             <span class="font-bold text-slate-500">Mailer</span>
@@ -91,12 +85,12 @@
                             <span class="text-right font-black text-slate-950">{{ config('mail.mailers.smtp.host') }}:{{ config('mail.mailers.smtp.port') }}</span>
                         </div>
                         <div class="flex items-center justify-between gap-3">
-                            <span class="font-bold text-slate-500">Recipient Mode</span>
-                            <span class="font-black {{ config('event_management.confirmation_email_test_mode') ? 'text-amber-700' : 'text-emerald-700' }}">{{ config('event_management.confirmation_email_test_mode') ? 'Test override' : 'Participant email' }}</span>
+                            <span class="font-bold text-slate-500">From Address</span>
+                            <span class="break-all font-black text-slate-950">{{ config('mail.from.address') }}</span>
                         </div>
-                        <div>
-                            <p class="font-bold text-slate-500">Current Test Recipient</p>
-                            <p class="mt-1 break-all font-black text-slate-950">{{ config('event_management.confirmation_email_test_recipient') }}</p>
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="font-bold text-slate-500">Recipient</span>
+                            <span class="font-black text-emerald-700">Participant email</span>
                         </div>
                     </div>
                 </x-ui.card>

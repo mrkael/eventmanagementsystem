@@ -9,4 +9,4 @@
     </div>
     <div class="md:col-span-2"><label for="description" class="block text-sm font-medium text-slate-700">Description</label><textarea id="description" name="description" rows="4" class="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20">{{ old('description', $type->description ?? '') }}</textarea></div>
 </div>
-<div class="mt-6 flex gap-3"><button class="min-h-11 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">{{ $button ?? 'Save type' }}</button><a href="{{ route('admin.event-types.index') }}" class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50">Cancel</a></div>
+<div class="mt-6 flex gap-3"><button class="btn btn-primary btn-md">{{ $button ?? 'Save type' }}</button><a href="{{ route('admin.event-types.index') }}" class="btn btn-outline-primary btn-md">Cancel</a></div>

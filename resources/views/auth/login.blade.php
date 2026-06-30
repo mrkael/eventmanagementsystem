@@ -34,7 +34,7 @@
                     Remember this device
                 </label>
 
-                <button type="submit" class="min-h-11 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2">Sign in</button>
+                <button type="submit" class="btn btn-primary btn-md w-full">Sign in</button>
             </form>
 
             @if (config('event_management.self_registration_enabled'))

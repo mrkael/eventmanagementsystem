@@ -26,7 +26,7 @@ class AttendeeController extends Controller
             'registrations' => $this->filteredRegistrations($request, $event)
                 ->with('ticket', 'answers')
                 ->latest()
-                ->paginate(15)
+                ->paginate(in_array((int) $request->input('per_page'), [10, 50, 100]) ? (int) $request->input('per_page') : 10)
                 ->withQueryString(),
             'statuses' => ['confirmed', 'pending', 'cancelled', 'attended', 'no_show'],
         ]);

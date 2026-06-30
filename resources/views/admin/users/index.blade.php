@@ -15,9 +15,9 @@
                         <option value="{{ $department->id }}" @selected((string) request('department_id') === (string) $department->id)>{{ $department->name }}</option>
                     @endforeach
                 </select>
-                <button class="min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50">Filter</button>
+                <button class="btn btn-outline-primary btn-md">Filter</button>
             </form>
-            <a href="{{ route('admin.users.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">New user</a>
+            <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-md">New user</a>
         </div>
 
         <div class="overflow-x-auto">
@@ -34,10 +34,10 @@
                             <td class="px-5 py-4"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ ucfirst($user->status->value) }}</span></td>
                             <td class="px-5 py-4">
                                 <div class="flex justify-end gap-2">
-                                    <a href="{{ route('admin.users.edit', $user) }}" class="rounded-lg border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50">Edit</a>
+                                    <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-outline-primary btn-sm">Edit</a>
                                     <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Delete this user?')">
                                         @csrf @method('DELETE')
-                                        <button @disabled($user->is(auth()->user())) class="rounded-lg border border-red-200 px-3 py-2 font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40">Delete</button>
+                                        <button @disabled($user->is(auth()->user())) class="btn btn-outline-danger btn-sm disabled:cursor-not-allowed disabled:opacity-40">Delete</button>
                                     </form>
                                 </div>
                             </td>

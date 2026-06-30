@@ -24,6 +24,6 @@
     </div>
 </div>
 <div class="mt-6 flex flex-wrap gap-3">
-    <button class="min-h-11 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">{{ $button ?? 'Save category' }}</button>
-    <a href="{{ route('admin.event-categories.index') }}" class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</a>
+    <button class="btn btn-primary btn-md">{{ $button ?? 'Save category' }}</button>
+    <a href="{{ route('admin.event-categories.index') }}" class="btn btn-outline-primary btn-md">Cancel</a>
 </div>

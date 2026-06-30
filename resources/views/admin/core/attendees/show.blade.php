@@ -105,7 +105,7 @@
                 <form method="POST" action="{{ route('core.events.attendees.cancel', [$event, $registration]) }}">
                     @csrf
                     @method('PATCH')
-                    <button @disabled($registration->status === 'cancelled') class="w-full rounded-full border border-red-200 px-4 py-3 text-sm font-black text-red-700 hover:bg-red-50 disabled:opacity-40">Cancel Registration</button>
+                    <button @disabled($registration->status === 'cancelled') class="btn btn-outline-danger btn-md w-full disabled:opacity-40">Cancel Registration</button>
                 </form>
             </x-ui.card>
         </aside>
