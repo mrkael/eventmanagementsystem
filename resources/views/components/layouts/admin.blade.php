@@ -117,27 +117,15 @@
         {{-- ── Main content ────────────────────────────────────────── --}}
         <div class="flex min-w-0 flex-1 flex-col">
 
-            <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/95 px-6 py-3.5 backdrop-blur-md">
-                <div class="flex items-center gap-4">
-                    <button
-                        type="button"
-                        data-sidebar-open
-                        class="grid size-9 place-items-center rounded-lg border border-slate-200 text-slate-600 transition-colors duration-150 hover:bg-slate-100 lg:hidden"
-                        aria-label="Open sidebar"
-                    >
-                        <span class="h-0.5 w-4 rounded bg-current shadow-[0_5px_0_currentColor,0_-5px_0_currentColor]"></span>
-                    </button>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-[11px] font-semibold uppercase tracking-widest text-[#002169]/70">{{ $eyebrow ?? 'Workspace' }}</p>
-                        <h1 class="truncate text-lg font-bold text-slate-950">{{ $heading ?? $title ?? 'Dashboard' }}</h1>
-                    </div>
-                    <div class="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400 md:flex">
-                        <x-ui.icon name="search" class="size-4 shrink-0" />
-                        <span>Search</span>
-                        <span class="ml-2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-500">Ctrl K</span>
-                    </div>
-                </div>
-            </header>
+            {{-- Mobile sidebar toggle (floating, only visible on small screens) --}}
+            <button
+                type="button"
+                data-sidebar-open
+                class="fixed left-4 top-4 z-50 grid size-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors duration-150 hover:bg-slate-100 lg:hidden"
+                aria-label="Open sidebar"
+            >
+                <span class="h-0.5 w-4 rounded bg-current shadow-[0_5px_0_currentColor,0_-5px_0_currentColor]"></span>
+            </button>
 
             <main id="main-content" class="ds-page-enter flex-1 px-4 py-5 lg:px-6 lg:py-6">
                 @if (session('status'))

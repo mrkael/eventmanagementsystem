@@ -17,6 +17,9 @@
         'checked_in_at' => $record->checked_in_at?->format('d M Y, H:i:s'),
         'checked_in_by' => $record->checkedInBy?->name,
         'attendee_url' => $record->registration ? route('core.events.attendees.show', [$event, $record->registration]) : null,
+        'latitude' => $record->latitude,
+        'longitude' => $record->longitude,
+        'location_name' => $record->location_name,
     ])->values();
 @endphp
 
@@ -117,6 +120,7 @@
                                     <th class="px-5 py-4">Reference</th>
                                     <th class="px-5 py-4">Check-In Time</th>
                                     <th class="px-5 py-4">Checked-In By</th>
+                                    <th class="px-5 py-4">Location</th>
                                     <th class="px-5 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -177,6 +181,36 @@
             let scanning = false;
             const recentScans = new Map();
 
+            let cachedLocation = null;
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        let locationName = null;
+                        try {
+                            const r = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                                { headers: { 'Accept-Language': 'en' } },
+                            );
+                            if (r.ok) {
+                                const geo = await r.json();
+                                const addr = geo.address || {};
+                                const parts = [
+                                    addr.road,
+                                    addr.suburb || addr.neighbourhood || addr.quarter,
+                                    addr.city || addr.town || addr.village || addr.county,
+                                ].filter((v, i, a) => v && a.indexOf(v) === i);
+                                locationName = parts.join(', ') || geo.display_name?.split(',').slice(0, 3).join(',').trim() || null;
+                            }
+                        } catch {}
+                        cachedLocation = { latitude: lat, longitude: lng, location_name: locationName };
+                    },
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+                );
+            }
+
             const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 
             const setMessage = (text, type = 'neutral') => {
@@ -204,6 +238,12 @@
                 records.forEach((record) => {
                     const row = document.createElement('tr');
                     row.className = 'transition hover:bg-slate-50';
+                    const hasLocation = record.latitude != null && record.longitude != null;
+                    const coordText = hasLocation ? `${Number(record.latitude).toFixed(5)}, ${Number(record.longitude).toFixed(5)}` : null;
+                    const mapsUrl = hasLocation ? `https://maps.google.com/?q=${record.latitude},${record.longitude}` : null;
+                    const locationCell = hasLocation
+                        ? `<a href="${mapsUrl}" target="_blank" rel="noopener" class="text-blue-600 hover:underline leading-tight">${record.location_name ? escapeHtml(record.location_name) : coordText}</a>${record.location_name ? `<br><span class="text-xs text-slate-400">${coordText}</span>` : ''}`
+                        : '–';
                     row.innerHTML = `
                         <td class="px-5 py-4 font-bold text-slate-950">${escapeHtml(record.participant_name)}</td>
                         <td class="px-5 py-4 text-slate-600">${escapeHtml(record.participant_email)}</td>
@@ -211,6 +251,7 @@
                         <td class="px-5 py-4 font-semibold text-slate-700">${escapeHtml(record.registration_reference)}</td>
                         <td class="px-5 py-4 text-slate-600">${escapeHtml(record.checked_in_at)}</td>
                         <td class="px-5 py-4 text-slate-600">${escapeHtml(record.checked_in_by || '-')}</td>
+                        <td class="px-5 py-4 text-slate-600">${locationCell}</td>
                         <td class="px-5 py-4 text-right">${record.attendee_url ? `<a href="${record.attendee_url}" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-white">View</a>` : ''}</td>
                     `;
                     recordsBody.appendChild(row);
@@ -242,6 +283,9 @@
                         session_id: sessionSelect.value,
                         qr_token: qrToken,
                         device_name: navigator.userAgent.slice(0, 160),
+                        latitude: cachedLocation?.latitude ?? null,
+                        longitude: cachedLocation?.longitude ?? null,
+                        location_name: cachedLocation?.location_name ?? null,
                     }),
                 });
                 const data = await response.json();

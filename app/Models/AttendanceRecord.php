@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['event_id', 'event_session_id', 'registration_id', 'ticket_id', 'checked_in_at', 'checked_in_by', 'checked_out_at', 'checked_out_by', 'notes', 'status'])]
+#[Fillable(['event_id', 'event_session_id', 'registration_id', 'ticket_id', 'checked_in_at', 'checked_in_by', 'checked_out_at', 'checked_out_by', 'notes', 'status', 'latitude', 'longitude', 'location_name'])]
 class AttendanceRecord extends Model
 {
     use HasFactory, SoftDeletes;
@@ -18,6 +18,8 @@ class AttendanceRecord extends Model
         return [
             'checked_in_at' => 'datetime',
             'checked_out_at' => 'datetime',
+            'latitude' => 'float',
+            'longitude' => 'float',
         ];
     }
 

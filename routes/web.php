@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\Core\EmailController as CoreEmailController;
 use App\Http\Controllers\Admin\Core\EventAgendaController as CoreEventAgendaController;
 use App\Http\Controllers\Admin\Core\EventController as CoreEventController;
 use App\Http\Controllers\Admin\Core\EventEmailController as CoreEventEmailController;
+use App\Http\Controllers\Admin\Core\DashboardController;
 use App\Http\Controllers\Admin\Core\FoundationController;
 use App\Http\Controllers\Admin\Core\MicrositeController as CoreMicrositeController;
 use App\Http\Controllers\Admin\Core\OrganiserProfileController as CoreOrganiserProfileController;
@@ -63,9 +64,12 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/dashboard', [FoundationController::class, 'dashboard'])
+    Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware('permission:dashboard.view')
         ->name('dashboard');
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats'])
+        ->middleware('permission:dashboard.view')
+        ->name('dashboard.stats');
 
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->middleware('permission:profile.update')

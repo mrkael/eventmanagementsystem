@@ -35,46 +35,52 @@
 
     <x-ui.card padding="p-0" class="mt-6 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
+            <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs font-bold uppercase text-slate-500">
                     <tr>
-                        <th class="px-5 py-4">Event Name</th>
-                        <th class="px-5 py-4">Organiser Profile</th>
-                        <th class="px-5 py-4">Event URL</th>
-                        <th class="px-5 py-4">Event Date</th>
-                        <th class="px-5 py-4">Status</th>
-                        <th class="px-5 py-4">Total Tickets</th>
-                        <th class="px-5 py-4">Created Date</th>
-                        <th class="px-5 py-4 text-right">Action</th>
+                        <th class="w-10 px-4 py-3 text-center">#</th>
+                        <th class="px-4 py-3">Event Name</th>
+                        <th class="whitespace-nowrap px-4 py-3">Event Date</th>
+                        <th class="w-px whitespace-nowrap px-4 py-3">Status</th>
+                        <th class="w-px px-4 py-3 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($events as $event)
-                        @php($eventStatus = $event->status_key instanceof \BackedEnum ? $event->status_key->value : $event->status_key)
+                        @php
+                            $eventStatus = $event->status_key instanceof \BackedEnum ? $event->status_key->value : $event->status_key;
+                            $statusBadge = match($eventStatus) {
+                                'published' => 'bg-emerald-50 text-emerald-700',
+                                'submitted' => 'bg-blue-50 text-blue-700',
+                                default     => 'bg-slate-100 text-slate-600',
+                            };
+                        @endphp
                         <tr class="transition hover:bg-slate-50">
-                            <td class="px-5 py-4">
-                                <a href="{{ route('core.events.show', $event) }}" class="font-bold text-slate-950 hover:text-blue-700">{{ $event->title }}</a>
-                                <p class="mt-1 text-xs text-slate-500">{{ $event->slug }}</p>
+                            <td class="px-4 py-3 text-center text-xs font-medium text-slate-400">
+                                {{ $events->firstItem() + $loop->index }}
                             </td>
-                            <td class="px-5 py-4 text-slate-600">{{ $event->organiserProfile?->name ?? 'Not assigned' }}</td>
-                            <td class="px-5 py-4">
-                                @if($event->custom_url)
-                                    <span class="font-mono text-xs text-slate-700">{{ url('/e/'.$event->custom_url) }}</span>
+                            <td class="px-4 py-3">
+                                <a href="{{ route('core.events.show', $event) }}" class="font-bold text-slate-950 hover:text-blue-700">{{ $event->title }}</a>
+                                <p class="mt-0.5 text-xs text-slate-400">{{ $event->slug }}</p>
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-slate-600">
+                                @if($event->starts_at)
+                                    <span class="font-medium">{{ $event->starts_at->format('d M Y') }}</span>
+                                    <p class="mt-0.5 text-xs text-slate-400">{{ $event->starts_at->format('H:i') }}{{ $event->ends_at ? ' – '.$event->ends_at->format('H:i') : '' }}</p>
                                 @else
-                                    <span class="font-mono text-xs text-slate-400">{{ url('/e/your-event-url') }}</span>
+                                    <span class="text-slate-400">—</span>
                                 @endif
                             </td>
-                            <td class="px-5 py-4 text-slate-600">{{ $event->starts_at?->format('d M Y, H:i') }}</td>
-                            <td class="px-5 py-4"><span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{{ ucfirst($eventStatus) }}</span></td>
-                            <td class="px-5 py-4 font-semibold text-slate-700">{{ number_format($event->tickets_count) }}</td>
-                            <td class="px-5 py-4 text-slate-500">{{ $event->created_at->format('d M Y') }}</td>
-                            <td class="px-5 py-4 text-right">
-                                <a href="{{ route('core.events.show', $event) }}" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-white">Open Details</a>
+                            <td class="w-px whitespace-nowrap px-4 py-3">
+                                <span class="rounded-full px-3 py-1 text-xs font-bold {{ $statusBadge }}">{{ ucfirst($eventStatus) }}</span>
+                            </td>
+                            <td class="w-px whitespace-nowrap px-4 py-3 text-right">
+                                <a href="{{ route('core.events.show', $event) }}" class="ds-button-secondary">Open Details</a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-5 py-10">
+                            <td colspan="5" class="px-4 py-10">
                                 <x-ui.empty-state icon="calendar" title="No events found" description="Create an event and assign it to an organiser profile before configuring settings and tickets." />
                             </td>
                         </tr>
@@ -82,7 +88,11 @@
                 </tbody>
             </table>
         </div>
-    </x-ui.card>
 
-    <div class="mt-6">{{ $events->links() }}</div>
+        @if($events->hasPages())
+            <div class="border-t border-slate-100 px-4 py-3">
+                {{ $events->links() }}
+            </div>
+        @endif
+    </x-ui.card>
 </x-layouts.admin>

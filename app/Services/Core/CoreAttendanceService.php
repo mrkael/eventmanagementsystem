@@ -79,6 +79,9 @@ class CoreAttendanceService
                         'checked_in_at' => $record->checked_in_at ?: now(),
                         'checked_in_by' => $user->id,
                         'status' => 'checked_in',
+                        'latitude' => isset($meta['latitude']) ? (float) $meta['latitude'] : null,
+                        'longitude' => isset($meta['longitude']) ? (float) $meta['longitude'] : null,
+                        'location_name' => $meta['location_name'] ?? null,
                     ]);
                 }
             }

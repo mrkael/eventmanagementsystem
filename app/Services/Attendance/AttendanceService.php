@@ -251,6 +251,9 @@ class AttendanceService
             'notes' => $notes,
             'ip_address' => request()?->ip(),
             'user_agent' => request()?->userAgent(),
+            'latitude' => isset($meta['latitude']) ? (float) $meta['latitude'] : null,
+            'longitude' => isset($meta['longitude']) ? (float) $meta['longitude'] : null,
+            'location_name' => $meta['location_name'] ?? null,
         ]);
     }
 

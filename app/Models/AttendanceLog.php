@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'event_id', 'event_session_id', 'participant_registration_id', 'attendance_qr_token_id', 'scanned_by',
     'action', 'result', 'scan_token_hash', 'device_name', 'reason', 'notes', 'ip_address', 'user_agent',
+    'latitude', 'longitude', 'location_name',
 ])]
 class AttendanceLog extends Model
 {

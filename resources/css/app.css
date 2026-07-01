@@ -1168,6 +1168,16 @@
         }
     }
 
+    @keyframes ds-page-exit {
+        from { opacity: 1; transform: translateY(0); }
+        to   { opacity: 0; transform: translateY(-6px); }
+    }
+
+    .ds-page-exit {
+        animation: ds-page-exit 200ms ease forwards;
+        pointer-events: none;
+    }
+
     @keyframes ds-shimmer {
         100% {
             transform: translateX(100%);

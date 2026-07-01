@@ -49,7 +49,12 @@ class CheckInController extends Controller
                 rawToken: $request->string('qr_token')->toString(),
                 action: 'check_in',
                 user: $request->user(),
-                meta: ['device_name' => $request->input('device_name')]
+                meta: [
+                    'device_name' => $request->input('device_name'),
+                    'latitude' => $request->input('latitude'),
+                    'longitude' => $request->input('longitude'),
+                    'location_name' => $request->input('location_name'),
+                ]
             );
         } catch (ValidationException $exception) {
             return response()->json([
@@ -90,6 +95,9 @@ class CheckInController extends Controller
             'checked_in_at' => $record->checked_in_at?->format('d M Y, H:i:s'),
             'checked_in_by' => $record->checkedInBy?->name,
             'attendee_url' => $record->registration ? route('core.events.attendees.show', [$event, $record->registration]) : null,
+            'latitude' => $record->latitude,
+            'longitude' => $record->longitude,
+            'location_name' => $record->location_name,
         ])->values()->all();
     }
 }

@@ -95,6 +95,14 @@
                         <p class="mt-1 text-slate-600">{{ $log->registration?->name ?? 'Unknown QR' }}</p>
                         <p class="mt-1 text-xs text-slate-500">{{ $log->created_at->format('d M Y H:i') }} by {{ $log->scanner?->name ?? 'System' }}</p>
                         @if($log->reason || $log->notes)<p class="mt-2 text-xs text-slate-500">{{ $log->reason ?: $log->notes }}</p>@endif
+                        @if($log->latitude !== null && $log->longitude !== null)
+                            <a href="https://maps.google.com/?q={{ $log->latitude }},{{ $log->longitude }}" target="_blank" rel="noopener" class="mt-1 block text-xs text-blue-600 hover:underline leading-tight">
+                                {{ $log->location_name ?? (number_format((float)$log->latitude, 5).', '.number_format((float)$log->longitude, 5)) }}
+                            </a>
+                            @if($log->location_name)
+                                <span class="text-xs text-slate-400">{{ number_format((float)$log->latitude, 5) }}, {{ number_format((float)$log->longitude, 5) }}</span>
+                            @endif
+                        @endif
                     </div>
                 @empty
                     <p class="text-sm text-slate-500">No scan history yet.</p>

@@ -18,6 +18,9 @@ class AttendanceScanRequest extends FormRequest
             'event_session_id' => ['nullable', 'integer', 'exists:event_sessions,id'],
             'device_name' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'location_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

@@ -51,6 +51,36 @@
             let scanner = null;
             let busy = false;
 
+            let cachedLocation = null;
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        let locationName = null;
+                        try {
+                            const r = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                                { headers: { 'Accept-Language': 'en' } },
+                            );
+                            if (r.ok) {
+                                const geo = await r.json();
+                                const addr = geo.address || {};
+                                const parts = [
+                                    addr.road,
+                                    addr.suburb || addr.neighbourhood || addr.quarter,
+                                    addr.city || addr.town || addr.village || addr.county,
+                                ].filter((v, i, a) => v && a.indexOf(v) === i);
+                                locationName = parts.join(', ') || geo.display_name?.split(',').slice(0, 3).join(',').trim() || null;
+                            }
+                        } catch {}
+                        cachedLocation = { latitude: lat, longitude: lng, location_name: locationName };
+                    },
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+                );
+            }
+
             const show = (message, ok = true) => {
                 result.textContent = message;
                 result.className = `mt-4 rounded-lg border px-4 py-3 text-sm ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800'}`;
@@ -63,7 +93,7 @@
                     const response = await fetch(routes[action], {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
-                        body: JSON.stringify({token, notes, event_session_id: manual.event_session_id.value, device_name: navigator.userAgent.slice(0, 120)}),
+                        body: JSON.stringify({token, notes, event_session_id: manual.event_session_id.value, device_name: navigator.userAgent.slice(0, 120), latitude: cachedLocation?.latitude ?? null, longitude: cachedLocation?.longitude ?? null, location_name: cachedLocation?.location_name ?? null}),
                     });
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.message || Object.values(data.errors || {})[0]?.[0] || 'Scan failed.');

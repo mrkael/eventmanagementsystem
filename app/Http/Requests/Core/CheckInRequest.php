@@ -19,6 +19,9 @@ class CheckInRequest extends FormRequest
             'token' => ['required_without:qr_token', 'string', 'max:255'],
             'action' => ['nullable', 'in:check_in,check_out'],
             'device_name' => ['nullable', 'string', 'max:160'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'location_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 }
